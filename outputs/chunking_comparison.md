@@ -64,3 +64,5 @@ Retrieved chunk: `1`
 Source: [noisy_clinical_report.txt](../data/sample_corpus/noisy_clinical_report.txt)
 Location: characters 0-118
 Text: > The clinical trial evaluated Drug Y in adult participants. The primary objective was to evaluate the safety of Drug Y.
+
+...
