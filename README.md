@@ -212,7 +212,6 @@ outputs/structured_output_samples.json
 
 The sample output includes a malformed-then-recovered case and a missing-field rejection case.
 
-
 ## Reusable Prompt Templates
 
 Prompt templates are separated from business logic in the `prompts/` folder and rendered at runtime via `src/prompt_templates.py`.
@@ -236,7 +235,7 @@ python -m src.template_render_demo
 
 Rendered examples are saved to:
 
-```text
+````text
 outputs/prompt_template_renders.txt
 
 
@@ -249,7 +248,7 @@ Run it with:
 
 ```bash
 python -m src.corpus_loader_demo
-```
+````
 
 What it demonstrates:
 
@@ -268,4 +267,18 @@ Sample intake output is saved to:
 
 ```text
 outputs/corpus_loader_intake.log
+```
+
+## Chunking Strategy Comparison
+
+Run the chunking comparison on the cleaned clinical report:
+
+```bash
+python -m src.chunking
+```
+
+The command compares paragraph-aware chunks with fixed-size chunks using overlap, reports chunk counts and average character sizes, and writes inspectable samples to:
+
+```text
+outputs/chunking_comparison.md
 ```

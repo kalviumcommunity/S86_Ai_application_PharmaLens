@@ -18,6 +18,7 @@ outputs/*
 !outputs/text_cleaning.log
 
 !outputs/corpus_loader_intake.log
+!outputs/chunking_comparison.md
 
 !outputs/structured_output_samples.json
  
