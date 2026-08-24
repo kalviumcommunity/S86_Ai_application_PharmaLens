@@ -16,11 +16,42 @@ SAMPLE_CORPUS_DIR = PROJECT_ROOT / "data" / "sample_corpus"
 
 @dataclass(frozen=True)
 class Chunk:
-    """A retrievable text unit with its source document and sequence number."""
+    """A retrievable text unit whose metadata can identify its source."""
 
     source_id: str
     chunk_id: int
     text: str
+    metadata: dict[str, str | int | None]
+
+
+def tag_chunks(
+    source: str,
+    chunks: list[tuple[str, int]],
+    *,
+    section: str | None = None,
+    page: int | None = None,
+) -> list[Chunk]:
+    """Attach consistent source metadata to text and its document offset."""
+    tagged: list[Chunk] = []
+
+    for chunk_index, (text, char_start) in enumerate(chunks, start=1):
+        tagged.append(
+            Chunk(
+                source_id=source,
+                chunk_id=chunk_index,
+                text=text,
+                metadata={
+                    "source": source,
+                    "chunk_index": chunk_index,
+                    "char_start": char_start,
+                    "char_end": char_start + len(text),
+                    "section": section,
+                    "page": page,
+                },
+            )
+        )
+
+    return tagged
 
 
 def paragraph_chunks(
@@ -34,33 +65,36 @@ def paragraph_chunks(
         if paragraph.strip()
     ]
 
-    chunks: list[str] = []
+    chunks: list[tuple[str, int]] = []
     current = ""
+    current_start = 0
+    paragraph_start = 0
 
     for paragraph in paragraphs:
         if len(paragraph) > max_characters:
             if current:
-                chunks.append(current)
+                chunks.append((current, current_start))
                 current = ""
             chunks.extend(
-                paragraph[index : index + max_characters]
+                (paragraph[index : index + max_characters], paragraph_start + index)
                 for index in range(0, len(paragraph), max_characters)
             )
         elif not current:
             current = paragraph
+            current_start = paragraph_start
         elif len(current) + 2 + len(paragraph) <= max_characters:
             current = f"{current}\n\n{paragraph}"
         else:
-            chunks.append(current)
+            chunks.append((current, current_start))
             current = paragraph
+            current_start = paragraph_start
+
+        paragraph_start += len(paragraph) + 2
 
     if current:
-        chunks.append(current)
+        chunks.append((current, current_start))
 
-    return [
-        Chunk(document.source_id, number, text)
-        for number, text in enumerate(chunks, start=1)
-    ]
+    return tag_chunks(document.source_id, chunks)
 
 
 def fixed_size_chunks(
@@ -77,14 +111,11 @@ def fixed_size_chunks(
     text = re.sub(r"\s+", " ", document.text).strip()
     step = chunk_size - overlap
     chunks = [
-        text[index : index + chunk_size]
+        (text[index : index + chunk_size], index)
         for index in range(0, len(text), step)
+        if text[index : index + chunk_size]
     ]
-    return [
-        Chunk(document.source_id, number, chunk)
-        for number, chunk in enumerate(chunks, start=1)
-        if chunk
-    ]
+    return tag_chunks(document.source_id, chunks)
 
 
 def average_chunk_size(chunks: list[Chunk]) -> float:
@@ -135,8 +166,26 @@ def build_report(document: LoadedDocument) -> str:
                     "",
                     f"> {chunk.text.replace(chr(10), ' ')}",
                     "",
+                    f"Metadata: `{chunk.metadata}`",
+                    "",
                 ]
             )
+
+    traced_chunk = strategies["Paragraph-aware (max 220 characters)"][0]
+    source_link = f"../data/sample_corpus/{traced_chunk.metadata['source']}"
+    lines.extend(
+        [
+            "## Traceback Example",
+            "",
+            "A retrieved chunk keeps its source metadata, so the answer layer can cite the exact document and character range:",
+            "",
+            f"Retrieved chunk: `{traced_chunk.metadata['chunk_index']}`",
+            f"Source: [{traced_chunk.metadata['source']}]({source_link})",
+            f"Location: characters {traced_chunk.metadata['char_start']}-{traced_chunk.metadata['char_end']}",
+            f"Text: > {traced_chunk.text}",
+            "",
+        ]
+    )
 
     return "\n".join(lines).rstrip() + "\n"
 

@@ -212,6 +212,23 @@ outputs/structured_output_samples.json
 
 The sample output includes a malformed-then-recovered case and a missing-field rejection case.
 
+## Chunk Metadata & Source Tracking
+
+Chunking preserves a consistent metadata dictionary beside every chunk. Each entry includes:
+
+- `source`: the source document identifier used for citation.
+- `chunk_index`: the chunk's one-based position in that document.
+- `char_start` and `char_end`: the range in the normalized text used by the chunker.
+- `section` and `page`: reserved fields populated when the source format provides them.
+
+Run the demonstration and regenerate the committed sample chunks with:
+
+```bash
+python -m src.chunking
+```
+
+The generated report at `outputs/chunking_comparison.md` shows text plus metadata for both chunking strategies and traces a retrieved chunk to a clickable source document and character range.
+
 ## Reusable Prompt Templates
 
 Prompt templates are separated from business logic in the `prompts/` folder and rendered at runtime via `src/prompt_templates.py`.
