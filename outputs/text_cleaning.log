@@ -1,0 +1,123 @@
+PHARMALENS TEXT EXTRACTION & CLEANING PIPELINE
+======================================================================
+
+Documents processed: 4
+
+Cleaning steps:
+1. Unicode NFKC normalization
+2. Line-ending normalization
+3. Page-number boilerplate removal
+4. Repeated-header/boilerplate removal
+5. Space and tab normalization
+6. Excessive blank-line removal
+
+======================================================================
+BEFORE / AFTER COMPARISON
+======================================================================
+
+SOURCE: clinical_trial_overview.txt
+----------------------------------------------------------------------
+BEFORE LENGTH: 190 characters
+AFTER LENGTH : 190 characters
+
+BEFORE:
+Clinical trials are research studies in human participants.
+They evaluate whether a treatment is safe and effective.
+Researchers also monitor side effects and compare outcomes with controls.
+
+AFTER:
+Clinical trials are research studies in human participants.
+They evaluate whether a treatment is safe and effective.
+Researchers also monitor side effects and compare outcomes with controls.
+
+======================================================================
+
+SOURCE: eligibility_criteria.md
+----------------------------------------------------------------------
+BEFORE LENGTH: 241 characters
+AFTER LENGTH : 241 characters
+
+BEFORE:
+# Eligibility Criteria
+
+Participants should:
+
+- Be adults aged 18 to 65.
+- Have a confirmed diagnosis based on protocol definitions.
+- Provide informed consent before enrollment.
+
+Exclusion examples include severe uncontrolled comorbidities.
+
+AFTER:
+# Eligibility Criteria
+
+Participants should:
+
+- Be adults aged 18 to 65.
+- Have a confirmed diagnosis based on protocol definitions.
+- Provide informed consent before enrollment.
+
+Exclusion examples include severe uncontrolled comorbidities.
+
+======================================================================
+
+SOURCE: study_export.html
+----------------------------------------------------------------------
+BEFORE LENGTH: 164 characters
+AFTER LENGTH : 164 characters
+
+BEFORE:
+Study Export Study Summary Phase 1 evaluates initial safety and dosage. Phase 2 explores early efficacy signals. Phase 3 confirms benefit and risk in larger groups.
+
+AFTER:
+Study Export Study Summary Phase 1 evaluates initial safety and dosage. Phase 2 explores early efficacy signals. Phase 3 confirms benefit and risk in larger groups.
+
+======================================================================
+
+SOURCE: noisy_clinical_report.txt
+----------------------------------------------------------------------
+BEFORE LENGTH: 662 characters
+AFTER LENGTH : 347 characters
+
+BEFORE:
+PHARMALENS CLINICAL RESEARCH REPORT
+PHARMALENS CLINICAL RESEARCH REPORT
+
+Clinical Trial Report - Study PL-202
+
+Page 1 of 3
+
+The clinical trial evaluated Drug Y in adult participants.
+The primary objective was to evaluate the safety of Drug Y.
+
+Page 1 of 3
+
+
+PHARMALENS CLINICAL RESEARCH REPORT
+
+Clinical Trial Report - Study PL-202
+
+Patients receiving Drug Y were monitored for adverse events.
+Common adverse events included headache and nausea.
+
+Page 2 of 3
+
+
+PHARMALENS CLINICAL RESEARCH REPORT
+
+Clinical Trial Report - Study PL-202
+
+The study also evaluated treatment response and tolerability.
+Mo
+
+AFTER:
+The clinical trial evaluated Drug Y in adult participants.
+The primary objective was to evaluate the safety of Drug Y.
+
+Patients receiving Drug Y were monitored for adverse events.
+Common adverse events included headache and nausea.
+
+The study also evaluated treatment response and tolerability.
+Most reported adverse events were mild to moderate.
+
+======================================================================

@@ -15,6 +15,7 @@ outputs/*
 !outputs/llm_first_completion.log
 !outputs/prompt_comparison.log
 !outputs/prompt_template_renders.txt
+!outputs/text_cleaning.log
 
 !outputs/corpus_loader_intake.log
 
