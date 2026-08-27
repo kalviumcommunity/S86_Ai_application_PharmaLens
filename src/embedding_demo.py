@@ -38,13 +38,6 @@ class StoredEmbedding:
     vector: list[float]
 
 
-@dataclass(frozen=True)
-class RankedChunk:
-    source_text: str
-    metadata: dict[str, str | int]
-    score: float
-
-
 TEXTS = [
     PreparedChunk(
         source_text=(
@@ -207,28 +200,6 @@ def cosine_similarity(
     )
 
 
-def rank_chunks(
-    query_vector: list[float],
-    stored_embeddings: list[StoredEmbedding],
-) -> list[RankedChunk]:
-    """Rank stored chunks from most similar to least similar."""
-
-    ranked_chunks = [
-        RankedChunk(
-            source_text=record.source_text,
-            metadata=record.metadata,
-            score=cosine_similarity(query_vector, record.vector),
-        )
-        for record in stored_embeddings
-    ]
-
-    return sorted(
-        ranked_chunks,
-        key=lambda chunk: chunk.score,
-        reverse=True,
-    )
-
-
 # ============================================================
 # DIMENSION VALIDATION
 # ============================================================
@@ -266,8 +237,6 @@ def validate_dimensions(
 def build_report(
     model: str,
     stored_embeddings: list[StoredEmbedding],
-    query: str,
-    ranked_chunks: list[RankedChunk],
 ) -> str:
     """
     Build the sample output report.
@@ -472,35 +441,7 @@ def build_report(
     # --------------------------------------------------------
 
     lines.append(
-        "TASK 4 - QUERY-TO-CHUNK RANKING"
-    )
-
-    lines.append(
-        "-" * 70
-    )
-
-    lines.append(
-        f"Query: {query}"
-    )
-
-    for rank, chunk in enumerate(ranked_chunks, start=1):
-        lines.append(
-            f"{rank}. {chunk.score:.6f} - {chunk.metadata['source_document']} "
-            f"(chunk {chunk.metadata['chunk_index']})"
-        )
-
-        lines.append(
-            f"   {chunk.source_text}"
-        )
-
-    lines.append("")
-
-    # --------------------------------------------------------
-    # Task 5
-    # --------------------------------------------------------
-
-    lines.append(
-        "TASK 5 - WHAT EMBEDDING VECTORS REPRESENT"
+        "TASK 4 - WHAT EMBEDDING VECTORS REPRESENT"
     )
 
     lines.append(
@@ -531,7 +472,7 @@ def build_report(
     lines.append("")
 
     # --------------------------------------------------------
-    # Task 6
+    # Task 5
     # --------------------------------------------------------
 
     lines.append(
@@ -601,10 +542,6 @@ def main() -> None:
         for chunk in TEXTS
     ]
 
-    query = (
-        "What adverse events were reported for patients receiving Drug X?"
-    )
-
     logging.info(
         "Embedding model: %s",
         model,
@@ -618,24 +555,17 @@ def main() -> None:
     embeddings = generate_embeddings(
         client=client,
         model=model,
-        texts=[query, *texts],
+        texts=texts,
     )
 
     stored_embeddings = store_embeddings(
         chunks=TEXTS,
-        embeddings=embeddings[1:],
-    )
-
-    ranked_chunks = rank_chunks(
-        query_vector=embeddings[0],
-        stored_embeddings=stored_embeddings,
+        embeddings=embeddings,
     )
 
     report = build_report(
         model=model,
         stored_embeddings=stored_embeddings,
-        query=query,
-        ranked_chunks=ranked_chunks,
     )
 
     print(
