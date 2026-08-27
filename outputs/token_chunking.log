@@ -1,0 +1,110 @@
+PHARMALENS - TOKEN-AWARE CHUNK SIZING & OVERLAP
+======================================================================
+
+Tokenizer: cl100k_base
+Chunk size: 400 tokens
+Chunk overlap: 40 tokens
+Overlap ratio: 10%
+
+TASK 1 + TASK 2 - TOKEN SIZING AND OVERLAP
+======================================================================
+
+SOURCE: clinical_trial_overview.txt
+Original tokens: 30
+Number of chunks: 1
+
+Chunk 1: 30 tokens, 190 characters
+Preview: Clinical trials are research studies in human participants. They evaluate whether a treatment is safe and effective. Researchers also monitor side effects and compare outcomes with controls.
+
+----------------------------------------------------------------------
+
+SOURCE: eligibility_criteria.md
+Original tokens: 47
+Number of chunks: 1
+
+Chunk 1: 47 tokens, 241 characters
+Preview: # Eligibility Criteria  Participants should:  - Be adults aged 18 to 65. - Have a confirmed diagnosis based on protocol definitions. - Provide informed consent before enrollment.  Exclusion examples include severe uncontrolled comorbidities.
+
+----------------------------------------------------------------------
+
+SOURCE: study_export.html
+Original tokens: 32
+Number of chunks: 1
+
+Chunk 1: 32 tokens, 164 characters
+Preview: Study Export Study Summary Phase 1 evaluates initial safety and dosage. Phase 2 explores early efficacy signals. Phase 3 confirms benefit and risk in larger groups.
+
+----------------------------------------------------------------------
+
+SOURCE: noisy_clinical_report.txt
+Original tokens: 161
+Number of chunks: 1
+
+Chunk 1: 161 tokens, 662 characters
+Preview: PHARMALENS CLINICAL RESEARCH REPORT PHARMALENS CLINICAL RESEARCH REPORT  Clinical Trial Report - Study PL-202  Page 1 of 3  The clinical trial evaluated Drug Y in adult participants. The primary objective was to evaluate the safety of Drug Y.  Page 1
+
+----------------------------------------------------------------------
+
+TASK 3 - OVERLAP EFFECT
+======================================================================
+
+BOUNDARY CONTEXT DEMONSTRATION
+======================================================================
+The same text is chunked twice:
+1. Without overlap
+2. With 10-token overlap
+
+WITHOUT OVERLAP
+----------------------------------------------------------------------
+Chunk 1 (35 tokens):
+The study enrolled adult participants with confirmed disease. Participants were randomly assigned to receive Drug X or placebo. The primary endpoint was the change in disease severity after twelve weeks. Safety monitoring
+
+Chunk 2 (35 tokens):
+ included adverse events, laboratory tests, vital signs, and treatment discontinuation. The study reported headache and nausea as commonly observed adverse events. Serious adverse events were reviewed separately by the
+
+Chunk 3 (3 tokens):
+ study investigators.
+
+WITH OVERLAP
+----------------------------------------------------------------------
+Chunk 1 (35 tokens):
+The study enrolled adult participants with confirmed disease. Participants were randomly assigned to receive Drug X or placebo. The primary endpoint was the change in disease severity after twelve weeks. Safety monitoring
+
+Chunk 2 (35 tokens):
+ change in disease severity after twelve weeks. Safety monitoring included adverse events, laboratory tests, vital signs, and treatment discontinuation. The study reported headache and nausea as commonly observed adverse
+
+Chunk 3 (23 tokens):
+ The study reported headache and nausea as commonly observed adverse events. Serious adverse events were reviewed separately by the study investigators.
+
+OBSERVATION
+----------------------------------------------------------------------
+With overlap, the end of one chunk is repeated at the beginning of the next chunk.
+This gives retrieval another opportunity to capture an idea that lies near a chunk boundary.
+
+TASK 4 - CHUNK SIZE AND OVERLAP JUSTIFICATION
+======================================================================
+
+Chosen configuration:
+- Chunk size: 400 tokens
+- Overlap: 40 tokens
+
+Why 400 tokens?
+A 400-token chunk is large enough to preserve a meaningful piece of a clinical document while remaining small enough for efficient retrieval.
+
+Why 40-token overlap?
+A 40-token overlap represents 10% of the chunk. It provides boundary context without duplicating too much text.
+
+Cost and retrieval trade-off:
+Increasing chunk size reduces the number of chunks but places more text into each retrieval result.
+Increasing overlap preserves more boundary context but creates duplicated tokens, increasing embedding and storage costs.
+
+These values are a starting point for PharmaLens. They should later be evaluated using retrieval precision, recall, answer correctness, and context-window constraints.
+
+TASK 5 - SUMMARY
+======================================================================
+
+Token-based chunking: IMPLEMENTED
+Controlled overlap: IMPLEMENTED
+Boundary demonstration: IMPLEMENTED
+Chunk size justification: DOCUMENTED
+Sample output: GENERATED
