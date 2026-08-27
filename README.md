@@ -87,6 +87,10 @@ CHAT_MODEL=gpt-4o-mini
 EMBED_MODEL=text-embedding-3-small
 ```
 
+`OPENAI_BASE_URL` is optional and defaults to the OpenAI API endpoint when it
+is omitted. The embedding demo only requires `OPENAI_API_KEY` and
+`EMBED_MODEL`.
+
 ### Important
 
 The `.env` file contains secrets and **must never be committed to Git**.
@@ -101,6 +105,17 @@ EMBED_MODEL=
 ```
 
 Copy `.env.example` to `.env` and provide your actual values.
+
+## Embedding Demo
+
+Run the API-based embedding example with:
+
+```bash
+python -m src.embedding_demo
+```
+
+The demo stores each returned vector with its source text and retrieval
+metadata, then writes verification output to `outputs/embedding_demo.log`.
 
 ## 6. Loading Secrets
 

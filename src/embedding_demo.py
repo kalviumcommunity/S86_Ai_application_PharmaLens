@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import math
+from dataclasses import dataclass
 from pathlib import Path
 
 from openai import OpenAI
@@ -24,27 +25,48 @@ OUTPUT_FILE = OUTPUT_DIR / "embedding_demo.log"
 # SAMPLE TEXTS
 # ============================================================
 
+@dataclass(frozen=True)
+class PreparedChunk:
+    source_text: str
+    metadata: dict[str, str | int]
+
+
+@dataclass(frozen=True)
+class StoredEmbedding:
+    source_text: str
+    metadata: dict[str, str | int]
+    vector: list[float]
+
+
 TEXTS = [
-    (
-        "similar_1",
-        "Patients receiving Drug X experienced mild headache "
-        "and nausea during the clinical trial."
+    PreparedChunk(
+        source_text=(
+            "Patients receiving Drug X experienced mild headache "
+            "and nausea during the clinical trial."
+        ),
+        metadata={"source_document": "clinical_trial_overview.txt", "chunk_index": 1, "section": "Adverse Events"},
     ),
-    (
-        "similar_2",
-        "The clinical study reported headache and nausea as "
-        "commonly observed adverse events in participants "
-        "treated with Drug X."
+    PreparedChunk(
+        source_text=(
+            "The clinical study reported headache and nausea as "
+            "commonly observed adverse events in participants "
+            "treated with Drug X."
+        ),
+        metadata={"source_document": "clinical_trial_overview.txt", "chunk_index": 2, "section": "Adverse Events"},
     ),
-    (
-        "unrelated",
-        "The hospital cafeteria serves pasta, rice, vegetables, "
-        "and sandwiches during lunch."
+    PreparedChunk(
+        source_text=(
+            "The hospital cafeteria serves pasta, rice, vegetables, "
+            "and sandwiches during lunch."
+        ),
+        metadata={"source_document": "hospital_facilities.txt", "chunk_index": 1, "section": "Cafeteria"},
     ),
-    (
-        "different_topic",
-        "The weather forecast predicts heavy rainfall and "
-        "strong winds this weekend."
+    PreparedChunk(
+        source_text=(
+            "The weather forecast predicts heavy rainfall and "
+            "strong winds this weekend."
+        ),
+        metadata={"source_document": "weather_report.txt", "chunk_index": 1, "section": "Forecast"},
     ),
 ]
 
@@ -97,18 +119,38 @@ def generate_embeddings(
 
     # Sort by index so the returned embeddings match
     # the original input order.
-    data = list(response.data)
+    data = sorted(response.data, key=lambda item: item.index)
 
     if len(data) != len(texts):
         raise ValueError(
             f"Expected {len(texts)} embeddings, but received {len(data)}."
         )
 
-    embeddings = [item.embedding for item in data]
-
     return [
         item.embedding
         for item in data
+    ]
+
+
+def store_embeddings(
+    chunks: list[PreparedChunk],
+    embeddings: list[list[float]],
+) -> list[StoredEmbedding]:
+    """Pair each API vector with its source chunk and retrieval metadata."""
+
+    if len(chunks) != len(embeddings):
+        raise ValueError(
+            f"Expected one embedding per chunk, got {len(embeddings)} for "
+            f"{len(chunks)} chunks."
+        )
+
+    return [
+        StoredEmbedding(
+            source_text=chunk.source_text,
+            metadata=chunk.metadata,
+            vector=vector,
+        )
+        for chunk, vector in zip(chunks, embeddings)
     ]
 
 
@@ -194,8 +236,7 @@ def validate_dimensions(
 
 def build_report(
     model: str,
-    texts: list[tuple[str, str]],
-    embeddings: list[list[float]],
+    stored_embeddings: list[StoredEmbedding],
 ) -> str:
     """
     Build the sample output report.
@@ -231,9 +272,7 @@ def build_report(
         "-" * 70
     )
 
-    lines.append(
-        f"Generated {len(embeddings)} embeddings."
-    )
+    lines.append(f"Embedded chunks: {len(stored_embeddings)}")
 
     lines.append("")
 
@@ -242,7 +281,7 @@ def build_report(
     # --------------------------------------------------------
 
     dimension = validate_dimensions(
-        embeddings
+        [record.vector for record in stored_embeddings]
     )
 
     lines.append(
@@ -275,27 +314,31 @@ def build_report(
         "-" * 70
     )
 
-    for index, ((name, text), vector) in enumerate(
-        zip(texts, embeddings),
+    for index, record in enumerate(
+        stored_embeddings,
         start=1,
     ):
 
         lines.append(
-            f"Sample {index}: {name}"
+            f"Sample {index}: {record.metadata['source_document']}"
         )
 
         lines.append(
-            f"Text: {text}"
+            f"Text: {record.source_text}"
         )
 
         lines.append(
-            f"Vector dimension: {len(vector)}"
+            f"Metadata: {record.metadata}"
+        )
+
+        lines.append(
+            f"Vector length: {len(record.vector)}"
         )
 
         # Only show a small portion of the vector.
         lines.append(
             "First 8 vector values: "
-            + str(vector[:8])
+            + str(record.vector[:8])
         )
 
         lines.append("")
@@ -305,18 +348,18 @@ def build_report(
     # --------------------------------------------------------
 
     similar_score = cosine_similarity(
-        embeddings[0],
-        embeddings[1],
+        stored_embeddings[0].vector,
+        stored_embeddings[1].vector,
     )
 
     unrelated_score = cosine_similarity(
-        embeddings[0],
-        embeddings[2],
+        stored_embeddings[0].vector,
+        stored_embeddings[2].vector,
     )
 
     different_topic_score = cosine_similarity(
-        embeddings[0],
-        embeddings[3],
+        stored_embeddings[0].vector,
+        stored_embeddings[3].vector,
     )
 
     lines.append(
@@ -479,28 +522,24 @@ def main() -> None:
         "\n========== PHARMALENS EMBEDDINGS DEMO ==========\n"
     )
 
-    settings = load_settings()
+    settings = load_settings(
+        require_chat=False,
+        require_embedding=True,
+    )
 
     model = settings["embed_model"]
 
-    if not model:
-        raise ValueError(
-            "EMBED_MODEL is missing from .env"
+    if settings["openai_base_url"]:
+        client = OpenAI(
+            base_url=settings["openai_base_url"],
+            api_key=settings["openai_api_key"],
         )
-
-    client = OpenAI(
-        base_url=settings["openai_base_url"],
-        api_key=settings["openai_api_key"],
-    )
-
-    labels = [
-        label
-        for label, _ in TEXTS
-    ]
+    else:
+        client = OpenAI(api_key=settings["openai_api_key"])
 
     texts = [
-        text
-        for _, text in TEXTS
+        chunk.source_text
+        for chunk in TEXTS
     ]
 
     logging.info(
@@ -519,10 +558,14 @@ def main() -> None:
         texts=texts,
     )
 
+    stored_embeddings = store_embeddings(
+        chunks=TEXTS,
+        embeddings=embeddings,
+    )
+
     report = build_report(
         model=model,
-        texts=TEXTS,
-        embeddings=embeddings,
+        stored_embeddings=stored_embeddings,
     )
 
     print(
