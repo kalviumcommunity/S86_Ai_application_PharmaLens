@@ -1,0 +1,68 @@
+PHARMALENS - EMBEDDINGS FUNDAMENTALS & VECTOR REPRESENTATION
+======================================================================
+
+Embedding model: gemini-embedding-001
+
+TASK 1 - EMBEDDING GENERATION
+----------------------------------------------------------------------
+Generated 4 embeddings.
+
+TASK 2 - VECTOR DIMENSION
+----------------------------------------------------------------------
+Vector dimension: 3072
+All sample embeddings have the same dimension: YES
+
+SAMPLE VECTOR OUTPUT
+----------------------------------------------------------------------
+Sample 1: similar_1
+Text: Patients receiving Drug X experienced mild headache and nausea during the clinical trial.
+Vector dimension: 3072
+First 8 vector values: [0.010428428649902344, -0.009602254256606102, -0.04072709381580353, -0.06568941473960876, 0.003175293328240514, 0.020543137565255165, -0.00948671717196703, 0.007406629156321287]
+
+Sample 2: similar_2
+Text: The clinical study reported headache and nausea as commonly observed adverse events in participants treated with Drug X.
+Vector dimension: 3072
+First 8 vector values: [0.011273011565208435, -0.014811176806688309, -0.01730329729616642, -0.05631457641720772, 0.0030617935117334127, 0.01847963035106659, -0.008921772241592407, 0.005468340124934912]
+
+Sample 3: unrelated
+Text: The hospital cafeteria serves pasta, rice, vegetables, and sandwiches during lunch.
+Vector dimension: 3072
+First 8 vector values: [-0.0028259241953492165, -0.0034863119944930077, 0.0009406341705471277, -0.0531180314719677, -0.013574988581240177, -0.006275321822613478, 0.0030911536887288094, 0.01973855122923851]
+
+Sample 4: different_topic
+Text: The weather forecast predicts heavy rainfall and strong winds this weekend.
+Vector dimension: 3072
+First 8 vector values: [0.009494817815721035, 0.011569883674383163, 0.004699863959103823, -0.05802633985877037, -0.0009630181593820453, 0.0009442489827051759, -0.004598844796419144, -0.004294966347515583]
+
+TASK 3 - COSINE SIMILARITY
+----------------------------------------------------------------------
+Similar pair:
+Clinical trial adverse events vs Drug X adverse events
+Cosine similarity: 0.918915
+
+Dissimilar pair:
+Clinical trial adverse events vs cafeteria menu
+Cosine similarity: 0.612141
+
+Different-topic pair:
+Clinical trial adverse events vs weather
+Cosine similarity: 0.587027
+
+RESULT: PASS
+The semantically similar pair has a higher similarity score than the unrelated pair.
+
+TASK 4 - WHAT EMBEDDING VECTORS REPRESENT
+----------------------------------------------------------------------
+An embedding vector is a numerical representation of the semantic meaning of text.
+It is not a random ID and it is not simply a count of the keywords in the text.
+Texts with similar meanings tend to have vectors that are closer together in vector space.
+This allows PharmaLens to retrieve relevant clinical document chunks even when the user's question uses different wording.
+
+TASK 5 - DEMONSTRATION SUMMARY
+----------------------------------------------------------------------
+Embedding generation: IMPLEMENTED
+Vector dimension reporting: IMPLEMENTED
+Dimension consistency validation: IMPLEMENTED
+Cosine similarity comparison: IMPLEMENTED
+Sample vector values: INCLUDED
+Embedding explanation: INCLUDED
