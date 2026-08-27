@@ -1,0 +1,52 @@
+PHARMALENS - CORPUS PREPARATION & INGESTION VALIDATION
+======================================================================
+
+INGESTION SUMMARY
+----------------------------------------------------------------------
+Total source documents : 5
+Successfully ingested  : 5
+Failed documents       : 0
+Total chunks created   : 5
+
+COMPLETENESS VALIDATION
+----------------------------------------------------------------------
+5 source files = 5 successful + 0 failures
+PASS - No documents were silently dropped.
+
+SUCCESSFUL DOCUMENTS
+----------------------------------------------------------------------
+sample_clinical_report.txt | 146 tokens | 1 chunks
+clinical_trial_overview.txt | 30 tokens | 1 chunks
+eligibility_criteria.md | 47 tokens | 1 chunks
+noisy_clinical_report.txt | 134 tokens | 1 chunks
+study_export.html | 91 tokens | 1 chunks
+
+FAILURES / SKIPPED FILES
+----------------------------------------------------------------------
+None
+
+SAMPLE CHUNKS WITH METADATA
+----------------------------------------------------------------------
+Sample 1
+Text: Clinical Trial Report - Study PL-101 Study PL-101 evaluated the safety and effectiveness of Drug X in adult participants. The study included participants who received either Drug X or a control treatment during the clinical trial. The primary objective of the study was to evaluate the effectiveness 
+Metadata: {'source': 'sample_clinical_report.txt', 'source_path': 'data\\sample_clinical_report.txt', 'chunk_index': 0, 'chunk_number': 1, 'total_chunks': 1, 'token_count': 146, 'character_count': 824}
+
+Sample 2
+Text: Clinical trials are research studies in human participants. They evaluate whether a treatment is safe and effective. Researchers also monitor side effects and compare outcomes with controls.
+Metadata: {'source': 'clinical_trial_overview.txt', 'source_path': 'data\\sample_corpus\\clinical_trial_overview.txt', 'chunk_index': 0, 'chunk_number': 1, 'total_chunks': 1, 'token_count': 30, 'character_count': 190}
+
+Sample 3
+Text: # Eligibility Criteria Participants should: - Be adults aged 18 to 65. - Have a confirmed diagnosis based on protocol definitions. - Provide informed consent before enrollment. Exclusion examples include severe uncontrolled comorbidities.
+Metadata: {'source': 'eligibility_criteria.md', 'source_path': 'data\\sample_corpus\\eligibility_criteria.md', 'chunk_index': 0, 'chunk_number': 1, 'total_chunks': 1, 'token_count': 47, 'character_count': 241}
+
+Sample 4
+Text: PHARMALENS CLINICAL RESEARCH REPORT PHARMALENS CLINICAL RESEARCH REPORT Clinical Trial Report - Study PL-202 The clinical trial evaluated Drug Y in adult participants. The primary objective was to evaluate the safety of Drug Y. PHARMALENS CLINICAL RESEARCH REPORT Clinical Trial Report - Study PL-202
+Metadata: {'source': 'noisy_clinical_report.txt', 'source_path': 'data\\sample_corpus\\noisy_clinical_report.txt', 'chunk_index': 0, 'chunk_number': 1, 'total_chunks': 1, 'token_count': 134, 'character_count': 608}
+
+Sample 5
+Text: <!doctype html> <html> <head> <meta charset="utf-8" /> <title>Study Export</title> </head> <body> <h1>Study Summary</h1> <p>Phase 1 evaluates initial safety and dosage.</p> <p>Phase 2 explores early efficacy signals.</p> <p>Phase 3 confirms benefit and risk in larger groups.</p> </body> </html>
+Metadata: {'source': 'study_export.html', 'source_path': 'data\\sample_corpus\\study_export.html', 'chunk_index': 0, 'chunk_number': 1, 'total_chunks': 1, 'token_count': 91, 'character_count': 305}
+
+PIPELINE
+----------------------------------------------------------------------
+Load → Clean → Token Chunk → Metadata → Validation

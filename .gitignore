@@ -21,4 +21,4 @@ outputs/*
 !outputs/chunking_comparison.md
 !outputs/token_chunking.log
 !outputs/structured_output_samples.json
- 
+!outputs/corpus_ingestion.log
