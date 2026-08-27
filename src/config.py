@@ -5,7 +5,10 @@ import os
 from dotenv import load_dotenv
 
 
-def load_settings() -> dict[str, str]:
+def load_settings(
+    require_chat: bool = True,
+    require_embedding: bool = False,
+) -> dict[str, str]:
     """
     Load application settings from the .env file.
 
@@ -22,10 +25,14 @@ def load_settings() -> dict[str, str]:
     }
 
     required_settings = {
-        "OPENAI_BASE_URL": settings["openai_base_url"],
         "OPENAI_API_KEY": settings["openai_api_key"],
-        "CHAT_MODEL": settings["chat_model"],
     }
+
+    if require_chat:
+        required_settings["CHAT_MODEL"] = settings["chat_model"]
+
+    if require_embedding:
+        required_settings["EMBED_MODEL"] = settings["embed_model"]
 
     missing_settings = [
         name
