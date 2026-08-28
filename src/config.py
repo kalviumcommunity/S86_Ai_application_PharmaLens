@@ -8,20 +8,65 @@ from dotenv import load_dotenv
 def load_settings(
     require_chat: bool = True,
     require_embedding: bool = False,
-) -> dict[str, str]:
+    require_vector_db: bool = False,
+) -> dict:
     """
     Load application settings from the .env file.
 
+    Args:
+        require_chat: Require CHAT_MODEL.
+        require_embedding: Require EMBED_MODEL.
+        require_vector_db: Require Qdrant configuration.
+
     Returns:
-        A dictionary containing the LLM API configuration.
+        A dictionary containing application configuration.
     """
     load_dotenv()
 
+    vector_dimension_raw = os.getenv(
+        "VECTOR_DIMENSION",
+        "1536",
+    ).strip()
+
+    try:
+        vector_dimension = int(vector_dimension_raw)
+    except ValueError:
+        raise ValueError(
+            "VECTOR_DIMENSION must be a valid integer."
+        )
+
     settings = {
-        "openai_base_url": os.getenv("OPENAI_BASE_URL", "").strip(),
-        "openai_api_key": os.getenv("OPENAI_API_KEY", "").strip(),
-        "chat_model": os.getenv("CHAT_MODEL", "").strip(),
-        "embed_model": os.getenv("EMBED_MODEL", "").strip(),
+        "openai_base_url": os.getenv(
+            "OPENAI_BASE_URL",
+            "",
+        ).strip(),
+
+        "openai_api_key": os.getenv(
+            "OPENAI_API_KEY",
+            "",
+        ).strip(),
+
+        "chat_model": os.getenv(
+            "CHAT_MODEL",
+            "",
+        ).strip(),
+
+        "embed_model": os.getenv(
+            "EMBED_MODEL",
+            "",
+        ).strip(),
+
+        "qdrant_url": os.getenv(
+            "QDRANT_URL",
+            "http://localhost:6333",
+        ).strip(),
+
+        "qdrant_collection": os.getenv(
+            "QDRANT_COLLECTION",
+            "rag_chunks",
+        ).strip(),
+
+        "vector_dimension": vector_dimension,
     }
 
     required_settings = {
@@ -34,6 +79,12 @@ def load_settings(
     if require_embedding:
         required_settings["EMBED_MODEL"] = settings["embed_model"]
 
+    if require_vector_db:
+        required_settings["QDRANT_URL"] = settings["qdrant_url"]
+        required_settings["QDRANT_COLLECTION"] = (
+            settings["qdrant_collection"]
+        )
+
     missing_settings = [
         name
         for name, value in required_settings.items()
@@ -44,6 +95,11 @@ def load_settings(
         raise ValueError(
             "Missing required environment variables: "
             + ", ".join(missing_settings)
+        )
+
+    if settings["vector_dimension"] <= 0:
+        raise ValueError(
+            "VECTOR_DIMENSION must be greater than 0."
         )
 
     return settings
