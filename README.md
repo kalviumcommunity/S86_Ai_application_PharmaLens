@@ -117,6 +117,24 @@ python -m src.embedding_demo
 The demo stores each returned vector with its source text and retrieval
 metadata, then writes verification output to `outputs/embedding_demo.log`.
 
+## Embedding Quality Sanity Checks
+
+Run known-query retrieval checks against the ingested sample corpus:
+
+```bash
+python -m src.embedding_sanity
+```
+
+The command embeds chunks and queries with the same `EMBED_MODEL`, ranks chunks
+with cosine similarity, validates vector dimensions and source metadata, and
+writes `outputs/embedding_sanity_report.md`. The report includes expected-source
+checks, top-result previews, and risks such as generic chunks outranking a more
+specific result. Run the offline unit checks with:
+
+```bash
+python -m unittest discover -s tests
+```
+
 ## 6. Loading Secrets
 
 Secrets should be loaded at runtime rather than hard-coded into the application.
