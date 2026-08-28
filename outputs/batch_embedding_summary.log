@@ -1,0 +1,22 @@
+2026-08-28 15:36:00,705 - INFO - ======================================================================
+2026-08-28 15:36:00,706 - INFO - PHARMALENS - BATCH EMBEDDING PIPELINE
+2026-08-28 15:36:00,706 - INFO - ======================================================================
+2026-08-28 15:36:00,706 - INFO - Embedding model: gemini-embedding-001
+2026-08-28 15:36:00,706 - INFO - Batch size: 4
+2026-08-28 15:36:00,706 - INFO - Total chunks: 8
+2026-08-28 15:36:00,706 - INFO - Already embedded: 8
+2026-08-28 15:36:00,707 - INFO - Pending chunks: 0
+2026-08-28 15:36:00,707 - INFO - 
+2026-08-28 15:36:00,707 - INFO - ======================================================================
+2026-08-28 15:36:00,707 - INFO - BATCH EMBEDDING RUN SUMMARY
+2026-08-28 15:36:00,707 - INFO - ======================================================================
+2026-08-28 15:36:00,707 - INFO - Total chunks: 8
+2026-08-28 15:36:00,707 - INFO - Embeddings generated: 0
+2026-08-28 15:36:00,707 - INFO - Skipped existing: 8
+2026-08-28 15:36:00,707 - INFO - Failed chunks: 0
+2026-08-28 15:36:00,707 - INFO - Batches processed: 0
+2026-08-28 15:36:00,707 - INFO - Estimated input tokens: 0
+2026-08-28 15:36:00,707 - INFO - Estimated cost: $0.00000000
+2026-08-28 15:36:00,708 - INFO - 
+2026-08-28 15:36:00,708 - INFO - Embedding store: D:\Pharma\S86_Ai_application_PharmaLens\outputs\batch_embeddings.json
+2026-08-28 15:36:00,708 - INFO - Summary log: D:\Pharma\S86_Ai_application_PharmaLens\outputs\batch_embedding_summary.log
