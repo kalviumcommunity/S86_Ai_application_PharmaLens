@@ -12,6 +12,20 @@ def load_settings(
 ) -> dict[str, str | int]:
     """Load application settings from the .env file."""
 
+    """
+    Load application settings from the .env file.
+
+    Args:
+        require_chat: Require CHAT_MODEL.
+        require_embedding: Require EMBED_MODEL.
+        require_vector_db: Require Qdrant configuration.
+
+    Returns:
+        A dictionary containing LLM, embedding, and optional vector database
+        configuration.
+    """
+ 
+
     load_dotenv()
 
     vector_dimension_raw = os.getenv("VECTOR_DIMENSION", "3072").strip()

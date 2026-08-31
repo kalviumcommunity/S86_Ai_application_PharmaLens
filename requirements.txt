@@ -2,3 +2,4 @@ openai
 chromadb
 python-dotenv
 tiktoken
+qdrant-client
