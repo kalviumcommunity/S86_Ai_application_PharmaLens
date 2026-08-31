@@ -10,6 +10,8 @@ def load_settings(
     require_embedding: bool = False,
     require_vector_db: bool = False,
 ) -> dict[str, str | int]:
+    """Load application settings from the .env file."""
+
     """
     Load application settings from the .env file.
 
@@ -22,6 +24,7 @@ def load_settings(
         A dictionary containing LLM, embedding, and optional vector database
         configuration.
     """
+ 
 
     load_dotenv()
 
