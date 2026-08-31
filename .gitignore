@@ -24,3 +24,4 @@ outputs/*
 !outputs/corpus_ingestion.log
 !outputs/embedding_demo.log
 !outputs/batch_embedding_summary.log
+!outputs/indexing_summary.log
