@@ -1,0 +1,15 @@
+2026-08-31 15:13:29,350 - INFO - ======================================================================
+2026-08-31 15:13:29,350 - INFO - PHARMALENS - INDEXING EMBEDDINGS & METADATA
+2026-08-31 15:13:29,350 - INFO - ======================================================================
+2026-08-31 15:13:29,366 - INFO - Embedding records loaded: 8
+2026-08-31 15:13:29,930 - INFO - Indexing batch 1/1
+2026-08-31 15:13:29,930 - INFO - Records in batch: 8
+2026-08-31 15:13:30,032 - INFO - Batch 1: SUCCESS
+2026-08-31 15:13:30,134 - INFO - ======================================================================
+2026-08-31 15:13:30,134 - INFO - INDEXING VALIDATION SUCCESS
+2026-08-31 15:13:30,134 - INFO - Expected chunks: 8
+2026-08-31 15:13:30,134 - INFO - Indexed corpus records: 8
+2026-08-31 15:13:30,134 - INFO - Inserted/upserted this run: 8
+2026-08-31 15:13:30,134 - INFO - Failures: 0
+2026-08-31 15:13:30,134 - INFO - Count validation: PASSED
+2026-08-31 15:13:30,134 - INFO - Spot-check: PASSED
