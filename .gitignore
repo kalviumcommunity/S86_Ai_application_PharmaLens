@@ -4,6 +4,8 @@ __pycache__/
 
 .env
 
+outputs/retrieval_query_embeddings.json
+
 data/*
 !data/.gitkeep
 !data/sample_corpus/
@@ -25,3 +27,4 @@ outputs/*
 !outputs/embedding_demo.log
 !outputs/batch_embedding_summary.log
 !outputs/indexing_summary.log
+!outputs/retrieval_tuning.log

@@ -1,0 +1,249 @@
+2026-09-01 15:08:32,577 - INFO - ======================================================================
+2026-09-01 15:08:32,578 - INFO - PHARMALENS - RETRIEVAL RELEVANCE TUNING
+2026-09-01 15:08:32,578 - INFO - ======================================================================
+2026-09-01 15:08:32,579 - INFO - Qdrant URL: http://localhost:6333
+2026-09-01 15:08:32,579 - INFO - Collection: rag_chunks
+2026-09-01 15:08:32,579 - INFO - Embedding model: gemini-embedding-001
+2026-09-01 15:08:32,580 - INFO - 
+2026-09-01 15:08:32,580 - INFO - ======================================================================
+2026-09-01 15:08:32,580 - INFO - TASK 1 - TEST QUERIES
+2026-09-01 15:08:32,580 - INFO - ======================================================================
+2026-09-01 15:08:32,580 - INFO - 1. What did Study 001 evaluate?
+2026-09-01 15:08:32,580 - INFO -    Expected source: Study_001_Clinical_Report.pdf
+2026-09-01 15:08:32,580 - INFO -    Expected chunk: study-001-chunk-001
+2026-09-01 15:08:32,580 - INFO - 2. What was the primary endpoint in Study 001?
+2026-09-01 15:08:32,581 - INFO -    Expected source: Study_001_Clinical_Report.pdf
+2026-09-01 15:08:32,581 - INFO -    Expected chunk: study-001-chunk-002
+2026-09-01 15:08:32,581 - INFO - 3. How did Drug Y compare with placebo?
+2026-09-01 15:08:32,581 - INFO -    Expected source: Study_002_Clinical_Report.pdf
+2026-09-01 15:08:32,581 - INFO -    Expected chunk: study-002-chunk-001
+2026-09-01 15:08:32,581 - INFO - 4. What adverse event information is associated with Drug X?
+2026-09-01 15:08:32,581 - INFO -    Expected source: Drug_X_Safety_Bulletin.pdf
+2026-09-01 15:08:32,581 - INFO -    Expected chunk: safety-bulletin-001
+2026-09-01 15:08:33,011 - INFO - Qdrant connection: SUCCESS
+2026-09-01 15:08:33,062 - INFO - Collection verified: rag_chunks
+2026-09-01 15:08:33,062 - INFO - Vector dimension verified: 3072
+2026-09-01 15:08:33,119 - INFO - Corpus records used for tuning: 8
+2026-09-01 15:08:33,119 - INFO - Cached query embeddings: 0
+2026-09-01 15:08:33,120 - INFO - 
+2026-09-01 15:08:33,120 - INFO - SETTING: baseline_k3
+2026-09-01 15:08:33,120 - INFO - k = 3
+2026-09-01 15:08:33,120 - INFO - minimum score = 0.00
+2026-09-01 15:08:33,120 - INFO - 
+2026-09-01 15:08:33,120 - INFO - QUERY: What did Study 001 evaluate?
+2026-09-01 15:08:33,121 - INFO - EXPECTED SOURCE: Study_001_Clinical_Report.pdf
+2026-09-01 15:08:33,121 - INFO - EXPECTED CHUNK: study-001-chunk-001
+2026-09-01 15:08:33,121 - INFO - Generating embedding for query: What did Study 001 evaluate?
+2026-09-01 15:08:34,942 - INFO - Cached query embedding: What did Study 001 evaluate?
+2026-09-01 15:08:35,110 - INFO - Returned results: 3
+2026-09-01 15:08:35,111 - INFO -   1. score=0.7581 | chunk=study-001-chunk-001 | source=Study_001_Clinical_Report.pdf
+2026-09-01 15:08:35,111 - INFO -      text=Study 001 evaluated the safety and efficacy of Drug X in adult patients with moderate disease.
+2026-09-01 15:08:35,111 - INFO -   2. score=0.7042 | chunk=study-002-chunk-001 | source=Study_002_Clinical_Report.pdf
+2026-09-01 15:08:35,112 - INFO -      text=Study 002 compared Drug Y with placebo to evaluate its effectiveness and safety.
+2026-09-01 15:08:35,112 - INFO -   3. score=0.6584 | chunk=study-002-chunk-002 | source=Study_002_Clinical_Report.pdf
+2026-09-01 15:08:35,112 - INFO -      text=The treatment group showed improvement in the primary clinical outcome compared with the placebo group.
+2026-09-01 15:08:35,112 - INFO - Source hit: PASS
+2026-09-01 15:08:35,112 - INFO - Chunk hit: PASS
+2026-09-01 15:08:35,112 - INFO - Top-1 hit: PASS
+2026-09-01 15:08:35,112 - INFO - 
+2026-09-01 15:08:35,112 - INFO - QUERY: What was the primary endpoint in Study 001?
+2026-09-01 15:08:35,112 - INFO - EXPECTED SOURCE: Study_001_Clinical_Report.pdf
+2026-09-01 15:08:35,113 - INFO - EXPECTED CHUNK: study-001-chunk-002
+2026-09-01 15:08:35,113 - INFO - Generating embedding for query: What was the primary endpoint in Study 001?
+2026-09-01 15:08:35,672 - INFO - Cached query embedding: What was the primary endpoint in Study 001?
+2026-09-01 15:08:35,783 - INFO - Returned results: 3
+2026-09-01 15:08:35,783 - INFO -   1. score=0.7405 | chunk=study-001-chunk-002 | source=Study_001_Clinical_Report.pdf
+2026-09-01 15:08:35,783 - INFO -      text=The primary endpoint was the change in disease severity from baseline after twelve weeks of treatment.
+2026-09-01 15:08:35,783 - INFO -   2. score=0.7394 | chunk=study-001-chunk-001 | source=Study_001_Clinical_Report.pdf
+2026-09-01 15:08:35,783 - INFO -      text=Study 001 evaluated the safety and efficacy of Drug X in adult patients with moderate disease.
+2026-09-01 15:08:35,784 - INFO -   3. score=0.7193 | chunk=study-002-chunk-002 | source=Study_002_Clinical_Report.pdf
+2026-09-01 15:08:35,784 - INFO -      text=The treatment group showed improvement in the primary clinical outcome compared with the placebo group.
+2026-09-01 15:08:35,784 - INFO - Source hit: PASS
+2026-09-01 15:08:35,784 - INFO - Chunk hit: PASS
+2026-09-01 15:08:35,784 - INFO - Top-1 hit: PASS
+2026-09-01 15:08:35,784 - INFO - 
+2026-09-01 15:08:35,784 - INFO - QUERY: How did Drug Y compare with placebo?
+2026-09-01 15:08:35,784 - INFO - EXPECTED SOURCE: Study_002_Clinical_Report.pdf
+2026-09-01 15:08:35,785 - INFO - EXPECTED CHUNK: study-002-chunk-001
+2026-09-01 15:08:35,785 - INFO - Generating embedding for query: How did Drug Y compare with placebo?
+2026-09-01 15:08:36,377 - INFO - Cached query embedding: How did Drug Y compare with placebo?
+2026-09-01 15:08:36,459 - INFO - Returned results: 3
+2026-09-01 15:08:36,459 - INFO -   1. score=0.8414 | chunk=study-002-chunk-001 | source=Study_002_Clinical_Report.pdf
+2026-09-01 15:08:36,460 - INFO -      text=Study 002 compared Drug Y with placebo to evaluate its effectiveness and safety.
+2026-09-01 15:08:36,460 - INFO -   2. score=0.7440 | chunk=study-002-chunk-002 | source=Study_002_Clinical_Report.pdf
+2026-09-01 15:08:36,460 - INFO -      text=The treatment group showed improvement in the primary clinical outcome compared with the placebo group.
+2026-09-01 15:08:36,460 - INFO -   3. score=0.6812 | chunk=study-001-chunk-001 | source=Study_001_Clinical_Report.pdf
+2026-09-01 15:08:36,460 - INFO -      text=Study 001 evaluated the safety and efficacy of Drug X in adult patients with moderate disease.
+2026-09-01 15:08:36,460 - INFO - Source hit: PASS
+2026-09-01 15:08:36,460 - INFO - Chunk hit: PASS
+2026-09-01 15:08:36,461 - INFO - Top-1 hit: PASS
+2026-09-01 15:08:36,461 - INFO - 
+2026-09-01 15:08:36,461 - INFO - QUERY: What adverse event information is associated with Drug X?
+2026-09-01 15:08:36,461 - INFO - EXPECTED SOURCE: Drug_X_Safety_Bulletin.pdf
+2026-09-01 15:08:36,461 - INFO - EXPECTED CHUNK: safety-bulletin-001
+2026-09-01 15:08:36,462 - INFO - Generating embedding for query: What adverse event information is associated with Drug X?
+2026-09-01 15:08:36,990 - INFO - Cached query embedding: What adverse event information is associated with Drug X?
+2026-09-01 15:08:37,044 - INFO - Returned results: 3
+2026-09-01 15:08:37,045 - INFO -   1. score=0.8377 | chunk=safety-bulletin-001 | source=Drug_X_Safety_Bulletin.pdf
+2026-09-01 15:08:37,045 - INFO -      text=The safety bulletin summarizes important adverse event information associated with Drug X.
+2026-09-01 15:08:37,045 - INFO -   2. score=0.7366 | chunk=study-001-chunk-001 | source=Study_001_Clinical_Report.pdf
+2026-09-01 15:08:37,045 - INFO -      text=Study 001 evaluated the safety and efficacy of Drug X in adult patients with moderate disease.
+2026-09-01 15:08:37,045 - INFO -   3. score=0.7149 | chunk=drug-x-label-001 | source=Drug_X_Label.pdf
+2026-09-01 15:08:37,046 - INFO -      text=Drug X should be administered according to the dosage and administration instructions in the approved label.
+2026-09-01 15:08:37,046 - INFO - Source hit: PASS
+2026-09-01 15:08:37,046 - INFO - Chunk hit: PASS
+2026-09-01 15:08:37,046 - INFO - Top-1 hit: PASS
+2026-09-01 15:08:37,046 - INFO - 
+2026-09-01 15:08:37,046 - INFO - SETTING: expanded_k5
+2026-09-01 15:08:37,046 - INFO - k = 5
+2026-09-01 15:08:37,047 - INFO - minimum score = 0.00
+2026-09-01 15:08:37,047 - INFO - 
+2026-09-01 15:08:37,047 - INFO - QUERY: What did Study 001 evaluate?
+2026-09-01 15:08:37,047 - INFO - EXPECTED SOURCE: Study_001_Clinical_Report.pdf
+2026-09-01 15:08:37,047 - INFO - EXPECTED CHUNK: study-001-chunk-001
+2026-09-01 15:08:37,047 - INFO - Using cached embedding: What did Study 001 evaluate?
+2026-09-01 15:08:37,081 - INFO - Returned results: 5
+2026-09-01 15:08:37,081 - INFO -   1. score=0.7581 | chunk=study-001-chunk-001 | source=Study_001_Clinical_Report.pdf
+2026-09-01 15:08:37,082 - INFO -      text=Study 001 evaluated the safety and efficacy of Drug X in adult patients with moderate disease.
+2026-09-01 15:08:37,082 - INFO -   2. score=0.7042 | chunk=study-002-chunk-001 | source=Study_002_Clinical_Report.pdf
+2026-09-01 15:08:37,083 - INFO -      text=Study 002 compared Drug Y with placebo to evaluate its effectiveness and safety.
+2026-09-01 15:08:37,083 - INFO -   3. score=0.6584 | chunk=study-002-chunk-002 | source=Study_002_Clinical_Report.pdf
+2026-09-01 15:08:37,083 - INFO -      text=The treatment group showed improvement in the primary clinical outcome compared with the placebo group.
+2026-09-01 15:08:37,083 - INFO -   4. score=0.6536 | chunk=study-001-chunk-002 | source=Study_001_Clinical_Report.pdf
+2026-09-01 15:08:37,083 - INFO -      text=The primary endpoint was the change in disease severity from baseline after twelve weeks of treatment.
+2026-09-01 15:08:37,083 - INFO -   5. score=0.6524 | chunk=study-002-chunk-003 | source=Study_002_Clinical_Report.pdf
+2026-09-01 15:08:37,083 - INFO -      text=The safety analysis identified no new major safety signals during the study period.
+2026-09-01 15:08:37,083 - INFO - Source hit: PASS
+2026-09-01 15:08:37,083 - INFO - Chunk hit: PASS
+2026-09-01 15:08:37,083 - INFO - Top-1 hit: PASS
+2026-09-01 15:08:37,084 - INFO - 
+2026-09-01 15:08:37,084 - INFO - QUERY: What was the primary endpoint in Study 001?
+2026-09-01 15:08:37,084 - INFO - EXPECTED SOURCE: Study_001_Clinical_Report.pdf
+2026-09-01 15:08:37,084 - INFO - EXPECTED CHUNK: study-001-chunk-002
+2026-09-01 15:08:37,084 - INFO - Using cached embedding: What was the primary endpoint in Study 001?
+2026-09-01 15:08:37,157 - INFO - Returned results: 5
+2026-09-01 15:08:37,157 - INFO -   1. score=0.7405 | chunk=study-001-chunk-002 | source=Study_001_Clinical_Report.pdf
+2026-09-01 15:08:37,157 - INFO -      text=The primary endpoint was the change in disease severity from baseline after twelve weeks of treatment.
+2026-09-01 15:08:37,157 - INFO -   2. score=0.7394 | chunk=study-001-chunk-001 | source=Study_001_Clinical_Report.pdf
+2026-09-01 15:08:37,158 - INFO -      text=Study 001 evaluated the safety and efficacy of Drug X in adult patients with moderate disease.
+2026-09-01 15:08:37,158 - INFO -   3. score=0.7193 | chunk=study-002-chunk-002 | source=Study_002_Clinical_Report.pdf
+2026-09-01 15:08:37,158 - INFO -      text=The treatment group showed improvement in the primary clinical outcome compared with the placebo group.
+2026-09-01 15:08:37,158 - INFO -   4. score=0.6740 | chunk=study-002-chunk-001 | source=Study_002_Clinical_Report.pdf
+2026-09-01 15:08:37,158 - INFO -      text=Study 002 compared Drug Y with placebo to evaluate its effectiveness and safety.
+2026-09-01 15:08:37,158 - INFO -   5. score=0.6517 | chunk=study-002-chunk-003 | source=Study_002_Clinical_Report.pdf
+2026-09-01 15:08:37,158 - INFO -      text=The safety analysis identified no new major safety signals during the study period.
+2026-09-01 15:08:37,158 - INFO - Source hit: PASS
+2026-09-01 15:08:37,158 - INFO - Chunk hit: PASS
+2026-09-01 15:08:37,159 - INFO - Top-1 hit: PASS
+2026-09-01 15:08:37,159 - INFO - 
+2026-09-01 15:08:37,159 - INFO - QUERY: How did Drug Y compare with placebo?
+2026-09-01 15:08:37,159 - INFO - EXPECTED SOURCE: Study_002_Clinical_Report.pdf
+2026-09-01 15:08:37,159 - INFO - EXPECTED CHUNK: study-002-chunk-001
+2026-09-01 15:08:37,159 - INFO - Using cached embedding: How did Drug Y compare with placebo?
+2026-09-01 15:08:37,211 - INFO - Returned results: 5
+2026-09-01 15:08:37,212 - INFO -   1. score=0.8414 | chunk=study-002-chunk-001 | source=Study_002_Clinical_Report.pdf
+2026-09-01 15:08:37,212 - INFO -      text=Study 002 compared Drug Y with placebo to evaluate its effectiveness and safety.
+2026-09-01 15:08:37,212 - INFO -   2. score=0.7440 | chunk=study-002-chunk-002 | source=Study_002_Clinical_Report.pdf
+2026-09-01 15:08:37,212 - INFO -      text=The treatment group showed improvement in the primary clinical outcome compared with the placebo group.
+2026-09-01 15:08:37,213 - INFO -   3. score=0.6812 | chunk=study-001-chunk-001 | source=Study_001_Clinical_Report.pdf
+2026-09-01 15:08:37,213 - INFO -      text=Study 001 evaluated the safety and efficacy of Drug X in adult patients with moderate disease.
+2026-09-01 15:08:37,213 - INFO -   4. score=0.6546 | chunk=study-001-chunk-002 | source=Study_001_Clinical_Report.pdf
+2026-09-01 15:08:37,213 - INFO -      text=The primary endpoint was the change in disease severity from baseline after twelve weeks of treatment.
+2026-09-01 15:08:37,213 - INFO -   5. score=0.6397 | chunk=drug-x-label-001 | source=Drug_X_Label.pdf
+2026-09-01 15:08:37,213 - INFO -      text=Drug X should be administered according to the dosage and administration instructions in the approved label.
+2026-09-01 15:08:37,213 - INFO - Source hit: PASS
+2026-09-01 15:08:37,213 - INFO - Chunk hit: PASS
+2026-09-01 15:08:37,214 - INFO - Top-1 hit: PASS
+2026-09-01 15:08:37,214 - INFO - 
+2026-09-01 15:08:37,214 - INFO - QUERY: What adverse event information is associated with Drug X?
+2026-09-01 15:08:37,214 - INFO - EXPECTED SOURCE: Drug_X_Safety_Bulletin.pdf
+2026-09-01 15:08:37,214 - INFO - EXPECTED CHUNK: safety-bulletin-001
+2026-09-01 15:08:37,214 - INFO - Using cached embedding: What adverse event information is associated with Drug X?
+2026-09-01 15:08:37,262 - INFO - Returned results: 5
+2026-09-01 15:08:37,262 - INFO -   1. score=0.8377 | chunk=safety-bulletin-001 | source=Drug_X_Safety_Bulletin.pdf
+2026-09-01 15:08:37,262 - INFO -      text=The safety bulletin summarizes important adverse event information associated with Drug X.
+2026-09-01 15:08:37,262 - INFO -   2. score=0.7366 | chunk=study-001-chunk-001 | source=Study_001_Clinical_Report.pdf
+2026-09-01 15:08:37,263 - INFO -      text=Study 001 evaluated the safety and efficacy of Drug X in adult patients with moderate disease.
+2026-09-01 15:08:37,263 - INFO -   3. score=0.7149 | chunk=drug-x-label-001 | source=Drug_X_Label.pdf
+2026-09-01 15:08:37,263 - INFO -      text=Drug X should be administered according to the dosage and administration instructions in the approved label.
+2026-09-01 15:08:37,263 - INFO -   4. score=0.6596 | chunk=study-002-chunk-003 | source=Study_002_Clinical_Report.pdf
+2026-09-01 15:08:37,263 - INFO -      text=The safety analysis identified no new major safety signals during the study period.
+2026-09-01 15:08:37,263 - INFO -   5. score=0.6550 | chunk=study-001-chunk-003 | source=Study_001_Clinical_Report.pdf
+2026-09-01 15:08:37,263 - INFO -      text=Common adverse events included headache, nausea, and fatigue during the treatment period.
+2026-09-01 15:08:37,263 - INFO - Source hit: PASS
+2026-09-01 15:08:37,264 - INFO - Chunk hit: PASS
+2026-09-01 15:08:37,264 - INFO - Top-1 hit: PASS
+2026-09-01 15:08:37,264 - INFO - 
+2026-09-01 15:08:37,264 - INFO - SETTING: strict_k3
+2026-09-01 15:08:37,264 - INFO - k = 3
+2026-09-01 15:08:37,265 - INFO - minimum score = 0.70
+2026-09-01 15:08:37,265 - INFO - 
+2026-09-01 15:08:37,265 - INFO - QUERY: What did Study 001 evaluate?
+2026-09-01 15:08:37,265 - INFO - EXPECTED SOURCE: Study_001_Clinical_Report.pdf
+2026-09-01 15:08:37,265 - INFO - EXPECTED CHUNK: study-001-chunk-001
+2026-09-01 15:08:37,265 - INFO - Using cached embedding: What did Study 001 evaluate?
+2026-09-01 15:08:37,319 - INFO - Returned results: 2
+2026-09-01 15:08:37,320 - INFO -   1. score=0.7581 | chunk=study-001-chunk-001 | source=Study_001_Clinical_Report.pdf
+2026-09-01 15:08:37,320 - INFO -      text=Study 001 evaluated the safety and efficacy of Drug X in adult patients with moderate disease.
+2026-09-01 15:08:37,320 - INFO -   2. score=0.7042 | chunk=study-002-chunk-001 | source=Study_002_Clinical_Report.pdf
+2026-09-01 15:08:37,321 - INFO -      text=Study 002 compared Drug Y with placebo to evaluate its effectiveness and safety.
+2026-09-01 15:08:37,321 - INFO - Source hit: PASS
+2026-09-01 15:08:37,321 - INFO - Chunk hit: PASS
+2026-09-01 15:08:37,321 - INFO - Top-1 hit: PASS
+2026-09-01 15:08:37,321 - INFO - 
+2026-09-01 15:08:37,321 - INFO - QUERY: What was the primary endpoint in Study 001?
+2026-09-01 15:08:37,321 - INFO - EXPECTED SOURCE: Study_001_Clinical_Report.pdf
+2026-09-01 15:08:37,321 - INFO - EXPECTED CHUNK: study-001-chunk-002
+2026-09-01 15:08:37,321 - INFO - Using cached embedding: What was the primary endpoint in Study 001?
+2026-09-01 15:08:37,407 - INFO - Returned results: 3
+2026-09-01 15:08:37,407 - INFO -   1. score=0.7405 | chunk=study-001-chunk-002 | source=Study_001_Clinical_Report.pdf
+2026-09-01 15:08:37,408 - INFO -      text=The primary endpoint was the change in disease severity from baseline after twelve weeks of treatment.
+2026-09-01 15:08:37,408 - INFO -   2. score=0.7394 | chunk=study-001-chunk-001 | source=Study_001_Clinical_Report.pdf
+2026-09-01 15:08:37,408 - INFO -      text=Study 001 evaluated the safety and efficacy of Drug X in adult patients with moderate disease.
+2026-09-01 15:08:37,408 - INFO -   3. score=0.7193 | chunk=study-002-chunk-002 | source=Study_002_Clinical_Report.pdf
+2026-09-01 15:08:37,408 - INFO -      text=The treatment group showed improvement in the primary clinical outcome compared with the placebo group.
+2026-09-01 15:08:37,409 - INFO - Source hit: PASS
+2026-09-01 15:08:37,409 - INFO - Chunk hit: PASS
+2026-09-01 15:08:37,409 - INFO - Top-1 hit: PASS
+2026-09-01 15:08:37,409 - INFO - 
+2026-09-01 15:08:37,409 - INFO - QUERY: How did Drug Y compare with placebo?
+2026-09-01 15:08:37,409 - INFO - EXPECTED SOURCE: Study_002_Clinical_Report.pdf
+2026-09-01 15:08:37,409 - INFO - EXPECTED CHUNK: study-002-chunk-001
+2026-09-01 15:08:37,409 - INFO - Using cached embedding: How did Drug Y compare with placebo?
+2026-09-01 15:08:37,482 - INFO - Returned results: 2
+2026-09-01 15:08:37,482 - INFO -   1. score=0.8414 | chunk=study-002-chunk-001 | source=Study_002_Clinical_Report.pdf
+2026-09-01 15:08:37,483 - INFO -      text=Study 002 compared Drug Y with placebo to evaluate its effectiveness and safety.
+2026-09-01 15:08:37,483 - INFO -   2. score=0.7440 | chunk=study-002-chunk-002 | source=Study_002_Clinical_Report.pdf
+2026-09-01 15:08:37,483 - INFO -      text=The treatment group showed improvement in the primary clinical outcome compared with the placebo group.
+2026-09-01 15:08:37,484 - INFO - Source hit: PASS
+2026-09-01 15:08:37,484 - INFO - Chunk hit: PASS
+2026-09-01 15:08:37,484 - INFO - Top-1 hit: PASS
+2026-09-01 15:08:37,484 - INFO - 
+2026-09-01 15:08:37,484 - INFO - QUERY: What adverse event information is associated with Drug X?
+2026-09-01 15:08:37,484 - INFO - EXPECTED SOURCE: Drug_X_Safety_Bulletin.pdf
+2026-09-01 15:08:37,485 - INFO - EXPECTED CHUNK: safety-bulletin-001
+2026-09-01 15:08:37,485 - INFO - Using cached embedding: What adverse event information is associated with Drug X?
+2026-09-01 15:08:37,545 - INFO - Returned results: 3
+2026-09-01 15:08:37,545 - INFO -   1. score=0.8377 | chunk=safety-bulletin-001 | source=Drug_X_Safety_Bulletin.pdf
+2026-09-01 15:08:37,546 - INFO -      text=The safety bulletin summarizes important adverse event information associated with Drug X.
+2026-09-01 15:08:37,546 - INFO -   2. score=0.7366 | chunk=study-001-chunk-001 | source=Study_001_Clinical_Report.pdf
+2026-09-01 15:08:37,546 - INFO -      text=Study 001 evaluated the safety and efficacy of Drug X in adult patients with moderate disease.
+2026-09-01 15:08:37,546 - INFO -   3. score=0.7149 | chunk=drug-x-label-001 | source=Drug_X_Label.pdf
+2026-09-01 15:08:37,546 - INFO -      text=Drug X should be administered according to the dosage and administration instructions in the approved label.
+2026-09-01 15:08:37,546 - INFO - Source hit: PASS
+2026-09-01 15:08:37,547 - INFO - Chunk hit: PASS
+2026-09-01 15:08:37,547 - INFO - Top-1 hit: PASS
+2026-09-01 15:08:37,547 - INFO - 
+2026-09-01 15:08:37,547 - INFO - ======================================================================
+2026-09-01 15:08:37,547 - INFO - TASK 3 - RELEVANCE RESULTS
+2026-09-01 15:08:37,547 - INFO - ======================================================================
+2026-09-01 15:08:37,547 - INFO - baseline_k3 | source hit rate=100.00% | chunk hit rate=100.00% | top-1 hit rate=100.00%
+2026-09-01 15:08:37,548 - INFO - expanded_k5 | source hit rate=100.00% | chunk hit rate=100.00% | top-1 hit rate=100.00%
+2026-09-01 15:08:37,548 - INFO - strict_k3 | source hit rate=100.00% | chunk hit rate=100.00% | top-1 hit rate=100.00%
+2026-09-01 15:08:37,548 - INFO - 
+2026-09-01 15:08:37,549 - INFO - SELECTED SETTING: baseline_k3
+2026-09-01 15:08:37,549 - INFO - JUSTIFICATION: baseline_k3 was selected because it achieved the best relevance result while retrieving only three chunks. Using a smaller k reduces unnecessary context and keeps retrieval efficient when relevance is already sufficient.
+2026-09-01 15:08:37,550 - INFO - 
+2026-09-01 15:08:37,550 - INFO - ======================================================================
+2026-09-01 15:08:37,550 - INFO - RETRIEVAL TUNING VALIDATION SUCCESS
+2026-09-01 15:08:37,550 - INFO - ======================================================================
