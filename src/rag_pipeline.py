@@ -2,7 +2,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from qdrant_client import QdrantClient
+import tiktoken
+
+try:
+    from qdrant_client import QdrantClient
+except ImportError:  # pragma: no cover - optional dependency for local vector retrieval
+    QdrantClient = None
 
 from src.config import load_settings
 from src.llm_client import create_client
@@ -20,8 +25,8 @@ settings = load_settings(
 
 client = create_client(settings)
 
-qdrant_client = QdrantClient(
-    url=settings["qdrant_url"]
+qdrant_client = (
+    QdrantClient(url=settings["qdrant_url"]) if QdrantClient is not None else None
 )
 
 COLLECTION_NAME = settings["qdrant_collection"]
@@ -119,44 +124,79 @@ def retrieve_chunks(
 # 4. CONTEXT ASSEMBLY
 # ---------------------------------------------------------
 
+MAX_CONTEXT_TOKENS = 5000
+
+
+def count_tokens(text: str) -> int:
+    """Estimate token usage using the cl100k_base tokenizer."""
+    encoder = tiktoken.get_encoding("cl100k_base")
+    return len(encoder.encode(text))
+
+
+def format_chunk(index: int, chunk: dict[str, Any]) -> str:
+    """Format a retrieved chunk with a source marker for citation."""
+    metadata = chunk.get("metadata", {})
+    source = metadata.get("source", "Unknown source")
+    chunk_index = metadata.get("chunk_index")
+    marker = f"[{index}] {source}#{chunk_index}"
+    return f"{marker}\n{chunk.get('text', '')}"
+
+
 def assemble_context(
     chunks: list[dict[str, Any]],
-) -> str:
+    max_tokens: int = MAX_CONTEXT_TOKENS,
+) -> tuple[str, int]:
     """
     Convert retrieved chunks into a structured context
-    that can be passed to the language model.
+    that can be passed to the language model while
+    staying within a token budget.
     """
-
     if not chunks:
-        return ""
+        return "", 0
 
-    parts = []
+    selected: list[str] = []
+    used_tokens = 0
 
     for index, chunk in enumerate(chunks, start=1):
-        metadata = chunk.get("metadata", {})
+        formatted = format_chunk(index, chunk)
+        token_count = count_tokens(formatted)
 
-        source = metadata.get(
-            "source",
-            "Unknown source",
-        )
+        if used_tokens + token_count > max_tokens:
+            break
 
-        chunk_id = chunk.get(
-            "id",
-            "Unknown chunk",
-        )
+        selected.append(formatted)
+        used_tokens += token_count
 
-        text = chunk.get(
-            "text",
-            "",
-        )
+    context = "\n\n---\n\n".join(selected)
+    return context, used_tokens
 
-        parts.append(
-            f"[{index}] Source: {source}\n"
-            f"Chunk ID: {chunk_id}\n"
-            f"{text}"
-        )
 
-    return "\n\n".join(parts)
+def build_prompt(
+    question: str,
+    retrieved_chunks: list[dict[str, Any]],
+    max_tokens: int = MAX_CONTEXT_TOKENS,
+) -> dict[str, Any]:
+    """Build a grounded prompt with token-budgeted context and source markers."""
+    context, context_tokens = assemble_context(retrieved_chunks, max_tokens=max_tokens)
+
+    prompt = f"""
+You are a grounded assistant.
+Answer the question using only the provided context.
+If the answer is not in the context, say: "I don't have enough information in the provided context."
+When possible, cite sources using the markers like [1] or [2].
+
+Context:
+{context}
+
+Question:
+{question}
+"""
+
+    return {
+        "prompt": prompt,
+        "context_tokens": context_tokens,
+        "sources_used": [chunk.get("metadata", {}) for chunk in retrieved_chunks],
+    }
 
 
 # ---------------------------------------------------------
@@ -251,7 +291,8 @@ def answer_query(
     )
 
     # Stage 3: Context Assembly
-    context = assemble_context(chunks)
+    prompt_payload = build_prompt(query, chunks)
+    context = prompt_payload["prompt"]
 
     # Stage 4: Grounded Generation
     answer = generate_answer(
