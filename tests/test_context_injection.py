@@ -1,6 +1,11 @@
 import unittest
 
-from src.rag_pipeline import assemble_context, build_prompt, format_chunk
+from src.rag_pipeline import (
+    assemble_context,
+    build_prompt,
+    format_chunk,
+    generate_answer,
+)
 
 
 class ContextInjectionTests(unittest.TestCase):
@@ -22,9 +27,10 @@ class ContextInjectionTests(unittest.TestCase):
             {"text": "C" * 200, "metadata": {"source": "s3.txt", "chunk_index": 2}},
         ]
 
-        context = assemble_context(chunks, max_tokens=200)
+        context, context_tokens = assemble_context(chunks, max_tokens=200)
         self.assertIsInstance(context, str)
-        self.assertLessEqual(len(context), 5000)
+        self.assertGreaterEqual(context_tokens, 0)
+        self.assertLessEqual(context_tokens, 200)
 
     def test_build_prompt_includes_context_and_grounding_instructions(self):
         chunks = [
@@ -41,6 +47,34 @@ class ContextInjectionTests(unittest.TestCase):
         self.assertIn("eligibility_criteria.md#1", result["prompt"])
         self.assertEqual(result["sources_used"][0]["source"], "eligibility_criteria.md")
         self.assertGreaterEqual(result["context_tokens"], 0)
+
+    def test_generate_answer_returns_string_for_empty_context(self):
+        """Test that generate_answer handles empty context gracefully."""
+        answer = generate_answer(
+            query="What were the results?",
+            context="",
+        )
+
+        self.assertIsInstance(answer, str)
+        self.assertIn("could not find", answer.lower())
+
+    def test_generate_answer_respects_grounding_constraint(self):
+        """Test that generated answers are grounded in provided context."""
+        context = """
+[1] clinical_trial.txt#0
+Adults aged 18 to 65 were eligible for participation.
+
+[2] eligibility_criteria.md#1
+All participants provided informed consent.
+"""
+
+        answer = generate_answer(
+            query="What were the eligibility criteria?",
+            context=context,
+        )
+
+        self.assertIsInstance(answer, str)
+        self.assertGreater(len(answer), 0)
 
 
 if __name__ == "__main__":

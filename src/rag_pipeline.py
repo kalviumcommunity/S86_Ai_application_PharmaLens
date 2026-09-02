@@ -261,6 +261,35 @@ Answer:
 # 6. COMPLETE RAG PIPELINE
 # ---------------------------------------------------------
 
+def generate_ungrounded_answer(query: str) -> str:
+    """
+    Generate an answer using only the model's internal knowledge,
+    without any retrieved context. Used for comparison with grounded answers.
+    """
+    prompt = f"""
+Answer this question based on your general knowledge:
+
+{query}
+"""
+
+    response = client.chat.completions.create(
+        model=CHAT_MODEL,
+        messages=[
+            {
+                "role": "user",
+                "content": prompt,
+            }
+        ],
+    )
+
+    answer = response.choices[0].message.content
+
+    if not answer:
+        return "The model did not return an answer."
+
+    return answer.strip()
+
+
 def answer_query(
     query: str,
     k: int = 3,
