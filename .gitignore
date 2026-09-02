@@ -28,3 +28,4 @@ outputs/*
 !outputs/batch_embedding_summary.log
 !outputs/indexing_summary.log
 !outputs/retrieval_tuning.log
+!outputs/rag_pipeline.log
