@@ -1,0 +1,55 @@
+Query: What did Study 001 evaluate?
+
+======================================================================
+PHARMALENS RAG PIPELINE
+======================================================================
+
+Stage 1: Query Embedding
+----------------------------------------------------------------------
+Embedding model: gemini-embedding-001
+Vector dimension: 3072
+Status: SUCCESS
+
+Stage 2: Retrieval
+----------------------------------------------------------------------
+Retrieved chunks: 3
+
+Result 1
+Chunk ID: study-001-chunk-001
+Score: 0.7581
+Source: Study_001_Clinical_Report.pdf
+
+Result 2
+Chunk ID: study-002-chunk-001
+Score: 0.7042
+Source: Study_002_Clinical_Report.pdf
+
+Result 3
+Chunk ID: study-002-chunk-002
+Score: 0.6584
+Source: Study_002_Clinical_Report.pdf
+
+Stage 3: Context Assembly
+----------------------------------------------------------------------
+Context chunks: 3
+Status: SUCCESS
+
+Stage 4: Grounded Generation
+----------------------------------------------------------------------
+Chat model: gemini-3.6-flash
+Status: SUCCESS
+
+Final RAG Result
+----------------------------------------------------------------------
+
+Question:
+What did Study 001 evaluate?
+
+Answer:
+Based on `Study_001_Clinical_Report.pdf`, Study 001 evaluated the safety and efficacy of Drug X in adult patients with moderate disease.
+
+Sources:
+- Study_001_Clinical_Report.pdf
+- Study_002_Clinical_Report.pdf
+
+======================================================================
