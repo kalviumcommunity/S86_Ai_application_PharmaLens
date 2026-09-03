@@ -1,0 +1,35 @@
+{
+  "refusal_case": {
+    "question": "What was the outcome of the unrelated treatment?",
+    "retrieval_quality": {
+      "is_sufficient": false,
+      "reason": "insufficient_relevance",
+      "relevance_threshold": 0.65,
+      "min_relevant_chunks": 1,
+      "retrieved_count": 1,
+      "relevant_count": 0,
+      "max_score": 0.41
+    },
+    "answer": "I don't have enough information in the provided context.",
+    "citations": {}
+  },
+  "successful_case": {
+    "question": "What adverse events were reported?",
+    "retrieval_quality": {
+      "is_sufficient": true,
+      "reason": "sufficient_relevance",
+      "relevance_threshold": 0.65,
+      "min_relevant_chunks": 1,
+      "retrieved_count": 2,
+      "relevant_count": 2,
+      "max_score": 0.91
+    },
+    "answer": "Headache and nausea were reported during the treatment period. [1]",
+    "citations": {
+      "[1]": {
+        "source": "clinical_trial_overview.txt",
+        "chunk_id": "trial-001-2"
+      }
+    }
+  }
+}
