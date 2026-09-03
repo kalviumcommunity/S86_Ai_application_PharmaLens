@@ -1,0 +1,51 @@
+======================================================================
+PHARMALENS SOURCE CITATION PIPELINE
+======================================================================
+
+Question:
+What did Study 001 evaluate?
+
+Generated Answer:
+Study 001 evaluated the safety and efficacy of Drug X in adult patients with moderate disease [1]. Its primary endpoint was the change in disease severity from baseline after twelve weeks of treatment [4].
+
+Citation Mapping:
+----------------------------------------------------------------------
+
+[1]
+Source: Study_001_Clinical_Report.pdf
+Chunk ID: study-001-chunk-001
+Chunk Index: 1
+Section: None
+Page: None
+Original Text: Study 001 evaluated the safety and efficacy of Drug X in adult patients with moderate disease.
+
+[2]
+Source: Study_002_Clinical_Report.pdf
+Chunk ID: study-002-chunk-001
+Chunk Index: 1
+Section: None
+Page: None
+Original Text: Study 002 compared Drug Y with placebo to evaluate its effectiveness and safety.
+
+[3]
+Source: Study_002_Clinical_Report.pdf
+Chunk ID: study-002-chunk-002
+Chunk Index: 2
+Section: None
+Page: None
+Original Text: The treatment group showed improvement in the primary clinical outcome compared with the placebo group.
+
+[4]
+Source: Study_001_Clinical_Report.pdf
+Chunk ID: study-001-chunk-002
+Chunk Index: 2
+Section: None
+Page: None
+Original Text: The primary endpoint was the change in disease severity from baseline after twelve weeks of treatment.
+
+Citation Verification:
+----------------------------------------------------------------------
+[1] -> Study_001_Clinical_Report.pdf -> study-001-chunk-001 -> VERIFIED
+[4] -> Study_001_Clinical_Report.pdf -> study-001-chunk-002 -> VERIFIED
+
+======================================================================
