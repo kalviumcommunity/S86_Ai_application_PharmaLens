@@ -1,0 +1,36 @@
+{
+  "dialogue": [
+    {
+      "turn": 1,
+      "user": "What adverse events were reported during the clinical trial?",
+      "standalone_query": "What adverse events were reported during the clinical trial?",
+      "retrieved_context": [
+        {
+          "source": "clinical_trial_overview.txt",
+          "score": 0.93,
+          "text": "Adverse events included headache, nausea, and fatigue."
+        }
+      ],
+      "assistant": "The reported adverse events were headache, nausea, and fatigue. [1]"
+    },
+    {
+      "turn": 2,
+      "user": "Which one was most common?",
+      "standalone_query": "Regarding the clinical research question 'What adverse events were reported during the clinical trial?', answer this follow-up: Which one was most common?",
+      "retrieved_context": [
+        {
+          "source": "clinical_trial_overview.txt",
+          "score": 0.91,
+          "text": "Headache was the most frequently reported adverse event."
+        }
+      ],
+      "assistant": "Headache was the most frequently reported adverse event. [1]"
+    }
+  ],
+  "final_history": [
+    {"role": "user", "content": "What adverse events were reported during the clinical trial?"},
+    {"role": "assistant", "content": "The reported adverse events were headache, nausea, and fatigue. [1]"},
+    {"role": "user", "content": "Which one was most common?"},
+    {"role": "assistant", "content": "Headache was the most frequently reported adverse event. [1]"}
+  ]
+}
