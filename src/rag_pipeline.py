@@ -5,6 +5,7 @@ from typing import Any
 from qdrant_client import QdrantClient
 
 from src.config import load_settings
+from src.hallucination_guardrails import assess_retrieval_quality
 from src.llm_client import create_client
 
 
@@ -458,6 +459,8 @@ def extract_citation_markers(
 def answer_with_citations(
     question: str,
     k: int = 4,
+    relevance_threshold: float = 0.65,
+    min_relevant_chunks: int = 1,
 ) -> dict[str, Any]:
     """
     Complete citation-aware RAG pipeline.
@@ -490,8 +493,14 @@ def answer_with_citations(
         k=k,
     )
 
-    # No-source fallback
-    if not chunks:
+    retrieval_quality = assess_retrieval_quality(
+        chunks,
+        relevance_threshold=relevance_threshold,
+        min_relevant_chunks=min_relevant_chunks,
+    )
+
+    # Refuse before calling the LLM when retrieval cannot support an answer.
+    if not retrieval_quality["is_sufficient"]:
         return {
             "answer": (
                 "I don't have enough information "
@@ -499,7 +508,8 @@ def answer_with_citations(
             ),
             "citations": {},
             "verified_citations": {},
-            "retrieved_chunks": [],
+            "retrieved_chunks": chunks,
+            "retrieval_quality": retrieval_quality,
         }
 
     # Stage 3
@@ -538,6 +548,7 @@ def answer_with_citations(
         "citations": citation_map,
         "verified_citations": verified_citations,
         "retrieved_chunks": chunks,
+        "retrieval_quality": retrieval_quality,
     }
 
 
