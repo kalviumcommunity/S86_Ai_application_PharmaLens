@@ -29,3 +29,4 @@ outputs/*
 !outputs/indexing_summary.log
 !outputs/retrieval_tuning.log
 !outputs/rag_pipeline.log
+!outputs/source_citation.log
