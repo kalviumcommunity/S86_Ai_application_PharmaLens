@@ -1,0 +1,362 @@
+{
+  "summary": {
+    "questions": 6,
+    "avg_correctness": 1.0,
+    "avg_grounding": 1.0,
+    "avg_citation_accuracy": 0.81,
+    "overall_score": 0.94,
+    "failures": [
+      {
+        "id": "eval-003",
+        "question": "What adverse events were reported for Drug X?",
+        "correctness": 1.0,
+        "grounding": 1.0,
+        "citation_accuracy": 0.5,
+        "causes": [
+          "One or more citations do not point to the expected supporting source."
+        ]
+      },
+      {
+        "id": "eval-006",
+        "question": "What safety information is associated with Drug X?",
+        "correctness": 1.0,
+        "grounding": 1.0,
+        "citation_accuracy": 0.33,
+        "causes": [
+          "One or more citations do not point to the expected supporting source."
+        ]
+      }
+    ]
+  },
+  "results": [
+    {
+      "id": "eval-001",
+      "question": "What did Study 001 evaluate?",
+      "expected_points": [
+        "safety",
+        "efficacy",
+        "Drug X",
+        "adult patients with moderate disease"
+      ],
+      "expected_sources": [
+        "Study_001_Clinical_Report.pdf"
+      ],
+      "answer": "Study 001 evaluated the safety and efficacy of Drug X in adult patients with moderate disease [1]. Its primary endpoint was the change in disease severity from baseline after twelve weeks of treatment [4].",
+      "correctness": 1.0,
+      "grounding": 1.0,
+      "citation_accuracy": 1.0,
+      "cited_sources": [
+        "Study_001_Clinical_Report.pdf"
+      ],
+      "citations": {
+        "[1]": {
+          "source": "Study_001_Clinical_Report.pdf",
+          "chunk_id": "study-001-chunk-001",
+          "chunk_index": 1,
+          "section": null,
+          "page": null,
+          "text": "Study 001 evaluated the safety and efficacy of Drug X in adult patients with moderate disease."
+        },
+        "[2]": {
+          "source": "Study_002_Clinical_Report.pdf",
+          "chunk_id": "study-002-chunk-001",
+          "chunk_index": 1,
+          "section": null,
+          "page": null,
+          "text": "Study 002 compared Drug Y with placebo to evaluate its effectiveness and safety."
+        },
+        "[3]": {
+          "source": "Study_002_Clinical_Report.pdf",
+          "chunk_id": "study-002-chunk-002",
+          "chunk_index": 2,
+          "section": null,
+          "page": null,
+          "text": "The treatment group showed improvement in the primary clinical outcome compared with the placebo group."
+        },
+        "[4]": {
+          "source": "Study_001_Clinical_Report.pdf",
+          "chunk_id": "study-001-chunk-002",
+          "chunk_index": 2,
+          "section": null,
+          "page": null,
+          "text": "The primary endpoint was the change in disease severity from baseline after twelve weeks of treatment."
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "eval-002",
+      "question": "What was the primary endpoint in Study 001?",
+      "expected_points": [
+        "change in disease severity",
+        "baseline",
+        "twelve weeks"
+      ],
+      "expected_sources": [
+        "Study_001_Clinical_Report.pdf"
+      ],
+      "answer": "In Study 001, the primary endpoint was the change in disease severity from baseline after twelve weeks of treatment [1].",
+      "correctness": 1.0,
+      "grounding": 1.0,
+      "citation_accuracy": 1.0,
+      "cited_sources": [
+        "Study_001_Clinical_Report.pdf"
+      ],
+      "citations": {
+        "[1]": {
+          "source": "Study_001_Clinical_Report.pdf",
+          "chunk_id": "study-001-chunk-002",
+          "chunk_index": 2,
+          "section": null,
+          "page": null,
+          "text": "The primary endpoint was the change in disease severity from baseline after twelve weeks of treatment."
+        },
+        "[2]": {
+          "source": "Study_001_Clinical_Report.pdf",
+          "chunk_id": "study-001-chunk-001",
+          "chunk_index": 1,
+          "section": null,
+          "page": null,
+          "text": "Study 001 evaluated the safety and efficacy of Drug X in adult patients with moderate disease."
+        },
+        "[3]": {
+          "source": "Study_002_Clinical_Report.pdf",
+          "chunk_id": "study-002-chunk-002",
+          "chunk_index": 2,
+          "section": null,
+          "page": null,
+          "text": "The treatment group showed improvement in the primary clinical outcome compared with the placebo group."
+        },
+        "[4]": {
+          "source": "Study_002_Clinical_Report.pdf",
+          "chunk_id": "study-002-chunk-001",
+          "chunk_index": 1,
+          "section": null,
+          "page": null,
+          "text": "Study 002 compared Drug Y with placebo to evaluate its effectiveness and safety."
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "eval-003",
+      "question": "What adverse events were reported for Drug X?",
+      "expected_points": [
+        "headache",
+        "nausea",
+        "fatigue"
+      ],
+      "expected_sources": [
+        "Study_001_Clinical_Report.pdf"
+      ],
+      "answer": "Common adverse events reported for Drug X during the treatment period included headache, nausea, and fatigue [4]. Important adverse event information associated with Drug X is also summarized in its safety bulletin [1].",
+      "correctness": 1.0,
+      "grounding": 1.0,
+      "citation_accuracy": 0.5,
+      "cited_sources": [
+        "Study_001_Clinical_Report.pdf",
+        "Drug_X_Safety_Bulletin.pdf"
+      ],
+      "citations": {
+        "[1]": {
+          "source": "Drug_X_Safety_Bulletin.pdf",
+          "chunk_id": "safety-bulletin-001",
+          "chunk_index": 1,
+          "section": null,
+          "page": null,
+          "text": "The safety bulletin summarizes important adverse event information associated with Drug X."
+        },
+        "[2]": {
+          "source": "Study_001_Clinical_Report.pdf",
+          "chunk_id": "study-001-chunk-001",
+          "chunk_index": 1,
+          "section": null,
+          "page": null,
+          "text": "Study 001 evaluated the safety and efficacy of Drug X in adult patients with moderate disease."
+        },
+        "[3]": {
+          "source": "Drug_X_Label.pdf",
+          "chunk_id": "drug-x-label-001",
+          "chunk_index": 1,
+          "section": null,
+          "page": null,
+          "text": "Drug X should be administered according to the dosage and administration instructions in the approved label."
+        },
+        "[4]": {
+          "source": "Study_001_Clinical_Report.pdf",
+          "chunk_id": "study-001-chunk-003",
+          "chunk_index": 3,
+          "section": null,
+          "page": null,
+          "text": "Common adverse events included headache, nausea, and fatigue during the treatment period."
+        }
+      },
+      "failures": [
+        "One or more citations do not point to the expected supporting source."
+      ]
+    },
+    {
+      "id": "eval-004",
+      "question": "How did Drug Y compare with placebo?",
+      "expected_points": [
+        "Drug Y",
+        "placebo",
+        "improvement"
+      ],
+      "expected_sources": [
+        "Study_002_Clinical_Report.pdf"
+      ],
+      "answer": "Study 002 compared Drug Y with placebo to evaluate its effectiveness and safety [1]. The treatment group receiving Drug Y showed improvement in the primary clinical outcome compared with the placebo group [2].",
+      "correctness": 1.0,
+      "grounding": 1.0,
+      "citation_accuracy": 1.0,
+      "cited_sources": [
+        "Study_002_Clinical_Report.pdf"
+      ],
+      "citations": {
+        "[1]": {
+          "source": "Study_002_Clinical_Report.pdf",
+          "chunk_id": "study-002-chunk-001",
+          "chunk_index": 1,
+          "section": null,
+          "page": null,
+          "text": "Study 002 compared Drug Y with placebo to evaluate its effectiveness and safety."
+        },
+        "[2]": {
+          "source": "Study_002_Clinical_Report.pdf",
+          "chunk_id": "study-002-chunk-002",
+          "chunk_index": 2,
+          "section": null,
+          "page": null,
+          "text": "The treatment group showed improvement in the primary clinical outcome compared with the placebo group."
+        },
+        "[3]": {
+          "source": "Study_001_Clinical_Report.pdf",
+          "chunk_id": "study-001-chunk-001",
+          "chunk_index": 1,
+          "section": null,
+          "page": null,
+          "text": "Study 001 evaluated the safety and efficacy of Drug X in adult patients with moderate disease."
+        },
+        "[4]": {
+          "source": "Study_001_Clinical_Report.pdf",
+          "chunk_id": "study-001-chunk-002",
+          "chunk_index": 2,
+          "section": null,
+          "page": null,
+          "text": "The primary endpoint was the change in disease severity from baseline after twelve weeks of treatment."
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "eval-005",
+      "question": "What did the safety analysis of Study 002 find?",
+      "expected_points": [
+        "no new major safety signals"
+      ],
+      "expected_sources": [
+        "Study_002_Clinical_Report.pdf"
+      ],
+      "answer": "The safety analysis of Study 002 identified no new major safety signals during the study period [1].",
+      "correctness": 1.0,
+      "grounding": 1.0,
+      "citation_accuracy": 1.0,
+      "cited_sources": [
+        "Study_002_Clinical_Report.pdf"
+      ],
+      "citations": {
+        "[1]": {
+          "source": "Study_002_Clinical_Report.pdf",
+          "chunk_id": "study-002-chunk-003",
+          "chunk_index": 3,
+          "section": null,
+          "page": null,
+          "text": "The safety analysis identified no new major safety signals during the study period."
+        },
+        "[2]": {
+          "source": "Study_002_Clinical_Report.pdf",
+          "chunk_id": "study-002-chunk-001",
+          "chunk_index": 1,
+          "section": null,
+          "page": null,
+          "text": "Study 002 compared Drug Y with placebo to evaluate its effectiveness and safety."
+        },
+        "[3]": {
+          "source": "Study_001_Clinical_Report.pdf",
+          "chunk_id": "study-001-chunk-001",
+          "chunk_index": 1,
+          "section": null,
+          "page": null,
+          "text": "Study 001 evaluated the safety and efficacy of Drug X in adult patients with moderate disease."
+        },
+        "[4]": {
+          "source": "Study_001_Clinical_Report.pdf",
+          "chunk_id": "study-001-chunk-003",
+          "chunk_index": 3,
+          "section": null,
+          "page": null,
+          "text": "Common adverse events included headache, nausea, and fatigue during the treatment period."
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "eval-006",
+      "question": "What safety information is associated with Drug X?",
+      "expected_points": [
+        "adverse event",
+        "Drug X"
+      ],
+      "expected_sources": [
+        "Drug_X_Safety_Bulletin.pdf"
+      ],
+      "answer": "Important adverse event information associated with Drug X is summarized in the safety bulletin [1]. The safety and efficacy of Drug X were evaluated in adult patients with moderate disease in Study 001 [2]. Furthermore, the safety analysis in Study 002 identified no new major safety signals during the study period [4].",
+      "correctness": 1.0,
+      "grounding": 1.0,
+      "citation_accuracy": 0.33,
+      "cited_sources": [
+        "Drug_X_Safety_Bulletin.pdf",
+        "Study_001_Clinical_Report.pdf",
+        "Study_002_Clinical_Report.pdf"
+      ],
+      "citations": {
+        "[1]": {
+          "source": "Drug_X_Safety_Bulletin.pdf",
+          "chunk_id": "safety-bulletin-001",
+          "chunk_index": 1,
+          "section": null,
+          "page": null,
+          "text": "The safety bulletin summarizes important adverse event information associated with Drug X."
+        },
+        "[2]": {
+          "source": "Study_001_Clinical_Report.pdf",
+          "chunk_id": "study-001-chunk-001",
+          "chunk_index": 1,
+          "section": null,
+          "page": null,
+          "text": "Study 001 evaluated the safety and efficacy of Drug X in adult patients with moderate disease."
+        },
+        "[3]": {
+          "source": "Drug_X_Label.pdf",
+          "chunk_id": "drug-x-label-001",
+          "chunk_index": 1,
+          "section": null,
+          "page": null,
+          "text": "Drug X should be administered according to the dosage and administration instructions in the approved label."
+        },
+        "[4]": {
+          "source": "Study_002_Clinical_Report.pdf",
+          "chunk_id": "study-002-chunk-003",
+          "chunk_index": 3,
+          "section": null,
+          "page": null,
+          "text": "The safety analysis identified no new major safety signals during the study period."
+        }
+      },
+      "failures": [
+        "One or more citations do not point to the expected supporting source."
+      ]
+    }
+  ]
+}
