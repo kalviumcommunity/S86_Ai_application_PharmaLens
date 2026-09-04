@@ -1,8 +1,9 @@
 """FastAPI backend for the PharmaLens RAG service.
 
-Exposes two endpoints:
-  POST /query  — accepts a question, returns a grounded answer with sources
-  GET  /health — liveness check for infrastructure / load-balancers
+Exposes three endpoints:
+  POST /query      — accepts a question, returns a grounded answer with sources
+  POST /documents  — uploads a document, ingests + embeds + indexes it at runtime
+  GET  /health     — liveness check for infrastructure / load-balancers
 
 Run with:
     uvicorn src.api:app --reload --host 0.0.0.0 --port 8000
@@ -10,14 +11,34 @@ Run with:
 
 from __future__ import annotations
 
+import time
+import uuid
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from pydantic import BaseModel, Field
 
 from src.config import load_settings
-from src.rag_pipeline import answer_with_citations
+from src.corpus_ingestion import process_document
+from src.rag_pipeline import answer_with_citations, client, embed_query, COLLECTION_NAME
+from qdrant_client import QdrantClient
+from qdrant_client.models import PointStruct
+
+
+# ---------------------------------------------------------------------------
+# Upload config
+# ---------------------------------------------------------------------------
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+UPLOAD_DIR = PROJECT_ROOT / "uploads"
+
+# Must match what corpus_loader_demo.to_plain_text() supports.
+SUPPORTED_EXTENSIONS = {".txt", ".md", ".html", ".htm"}
+
+# 10 MB hard limit per upload.
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 
 
 # ---------------------------------------------------------------------------
@@ -88,6 +109,22 @@ class HealthResponse(BaseModel):
     """Liveness response."""
 
     status: str
+
+
+class UploadSummary(BaseModel):
+    """Per-document ingestion statistics."""
+
+    document: str = Field(description="Path where the file was stored.")
+    chunks_produced: int = Field(description="Number of chunks created from the document.")
+    chunks_indexed: int = Field(description="Number of chunks successfully indexed into Qdrant.")
+
+
+class UploadResponse(BaseModel):
+    """Response from the document upload endpoint."""
+
+    status: str = Field(description="'indexed' on success, 'failed' on error.")
+    filename: str = Field(description="Original uploaded filename.")
+    summary: UploadSummary
 
 
 # ---------------------------------------------------------------------------
@@ -186,4 +223,160 @@ def query_rag(request: QueryRequest) -> QueryResponse:
         answer=result.get("answer", ""),
         sources=sources,
         status=status,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Upload helpers
+# ---------------------------------------------------------------------------
+
+def _safe_filename(original: str) -> str:
+    """
+    Strip directory components and append a short unique suffix so
+    two uploads of the same filename never clobber each other.
+    """
+    stem = Path(original).stem
+    suffix = Path(original).suffix.lower()
+    uid = uuid.uuid4().hex[:8]
+    # Keep only alphanumeric, dash, and underscore in the stem.
+    safe_stem = "".join(c if c.isalnum() or c in "-_" else "_" for c in stem)
+    return f"{safe_stem}_{uid}{suffix}"
+
+
+def _embed_and_index_chunks(
+    tagged_chunks: list[dict[str, Any]],
+    settings: dict[str, Any],
+) -> int:
+    """
+    Embed each chunk and upsert into Qdrant.
+
+    Returns the number of successfully indexed chunks.
+    """
+    from src.indexing import make_qdrant_id
+
+    qdrant = QdrantClient(url=settings["qdrant_url"])
+    indexed = 0
+
+    for chunk in tagged_chunks:
+        text = chunk["text"]
+        metadata = chunk["metadata"]
+
+        # Build a stable chunk ID from source name + index.
+        chunk_id = (
+            f"{metadata.get('source', 'upload')}"
+            f":{metadata.get('chunk_index', 0)}"
+        )
+
+        try:
+            vector = embed_query(text)
+        except Exception as exc:
+            # Log and skip individual chunks that fail to embed.
+            print(f"[upload] embed failed for {chunk_id}: {exc}")
+            continue
+
+        point = PointStruct(
+            id=make_qdrant_id(chunk_id),
+            vector=vector,
+            payload={
+                "original_chunk_id": chunk_id,
+                "text": text,
+                "metadata": {
+                    "source": metadata.get("source"),
+                    "chunk_index": metadata.get("chunk_index"),
+                    "chunk_number": metadata.get("chunk_number"),
+                    "total_chunks": metadata.get("total_chunks"),
+                    "token_count": metadata.get("token_count"),
+                },
+            },
+        )
+
+        qdrant.upsert(
+            collection_name=COLLECTION_NAME,
+            points=[point],
+            wait=True,
+        )
+        indexed += 1
+
+    return indexed
+
+
+# ---------------------------------------------------------------------------
+# Upload endpoint
+# ---------------------------------------------------------------------------
+
+@app.post("/documents", response_model=UploadResponse, tags=["rag"], status_code=201)
+async def upload_document(
+    file: UploadFile = File(..., description="Document to ingest (.txt, .md, .html)"),
+) -> UploadResponse:
+    """
+    Upload a document and make it searchable immediately.
+
+    Pipeline:
+    1. Validate file type and size.
+    2. Store the file under uploads/.
+    3. Load, clean, and chunk using the same corpus ingestion pipeline.
+    4. Embed each chunk and upsert into Qdrant.
+
+    After a successful upload, POST /query can retrieve content from
+    the new document without restarting the server.
+    """
+    # -- Validate extension --------------------------------------------------
+    suffix = Path(file.filename or "").suffix.lower()
+    if suffix not in SUPPORTED_EXTENSIONS:
+        raise HTTPException(
+            status_code=415,
+            detail=(
+                f"Unsupported file type '{suffix}'. "
+                f"Accepted: {', '.join(sorted(SUPPORTED_EXTENSIONS))}"
+            ),
+        )
+
+    # -- Read bytes (enforces size limit) ------------------------------------
+    raw_bytes = await file.read()
+    if len(raw_bytes) == 0:
+        raise HTTPException(status_code=422, detail="Uploaded file is empty.")
+    if len(raw_bytes) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File exceeds the {MAX_UPLOAD_BYTES // (1024*1024)} MB limit.",
+        )
+
+    # -- Store file ----------------------------------------------------------
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    safe_name = _safe_filename(file.filename or "upload.txt")
+    dest_path = UPLOAD_DIR / safe_name
+    dest_path.write_bytes(raw_bytes)
+
+    # -- Ingest: load → clean → chunk → metadata ----------------------------
+    try:
+        tagged_chunks, _token_count = process_document(dest_path)
+    except ValueError as exc:
+        dest_path.unlink(missing_ok=True)
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        dest_path.unlink(missing_ok=True)
+        raise HTTPException(status_code=500, detail="Document processing failed.") from exc
+
+    # -- Embed + index -------------------------------------------------------
+    try:
+        settings = load_settings(
+            require_chat=False,
+            require_embedding=True,
+            require_vector_db=True,
+        )
+        indexed = _embed_and_index_chunks(tagged_chunks, settings)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="Document indexing failed.",
+        ) from exc
+
+    return UploadResponse(
+        status="indexed",
+        filename=file.filename or safe_name,
+        summary=UploadSummary(
+            document=str(dest_path.relative_to(PROJECT_ROOT)),
+            chunks_produced=len(tagged_chunks),
+            chunks_indexed=indexed,
+        ),
     )
