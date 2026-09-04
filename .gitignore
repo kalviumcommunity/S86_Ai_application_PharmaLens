@@ -32,3 +32,6 @@ outputs/*
 !outputs/source_citation.log
 !outputs/evaluation_results.json
 !outputs/evaluation_summary.md
+
+uploads/*
+!uploads/.gitkeep
