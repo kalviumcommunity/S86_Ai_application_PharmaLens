@@ -1,0 +1,310 @@
+{
+  "d6e574bf4967ab9c0aa6b155adc8b045dfd35786a6a13e9d86871fd5700e584b": {
+    "created_at": 1788769537.9812524,
+    "response": {
+      "request_id": "cabd7c14-a384-40cd-8249-525899938424",
+      "answer": "Study 001 evaluated the safety and efficacy of Drug X in adult patients with moderate disease [1]. Its primary endpoint was the change in disease severity from baseline after twelve weeks of treatment [4].",
+      "citations": {
+        "[1]": {
+          "source": "Study_001_Clinical_Report.pdf",
+          "chunk_id": "study-001-chunk-001",
+          "chunk_index": 1,
+          "section": null,
+          "page": null,
+          "text": "Study 001 evaluated the safety and efficacy of Drug X in adult patients with moderate disease."
+        },
+        "[2]": {
+          "source": "Study_002_Clinical_Report.pdf",
+          "chunk_id": "study-002-chunk-001",
+          "chunk_index": 1,
+          "section": null,
+          "page": null,
+          "text": "Study 002 compared Drug Y with placebo to evaluate its effectiveness and safety."
+        },
+        "[3]": {
+          "source": "Study_002_Clinical_Report.pdf",
+          "chunk_id": "study-002-chunk-002",
+          "chunk_index": 2,
+          "section": null,
+          "page": null,
+          "text": "The treatment group showed improvement in the primary clinical outcome compared with the placebo group."
+        },
+        "[4]": {
+          "source": "Study_001_Clinical_Report.pdf",
+          "chunk_id": "study-001-chunk-002",
+          "chunk_index": 2,
+          "section": null,
+          "page": null,
+          "text": "The primary endpoint was the change in disease severity from baseline after twelve weeks of treatment."
+        }
+      },
+      "citation_verification": {
+        "[1]": {
+          "used_in_answer": true,
+          "source": "Study_001_Clinical_Report.pdf",
+          "chunk_id": "study-001-chunk-001",
+          "verified": true
+        },
+        "[2]": {
+          "used_in_answer": false,
+          "source": "Study_002_Clinical_Report.pdf",
+          "chunk_id": "study-002-chunk-001",
+          "verified": false
+        },
+        "[3]": {
+          "used_in_answer": false,
+          "source": "Study_002_Clinical_Report.pdf",
+          "chunk_id": "study-002-chunk-002",
+          "verified": false
+        },
+        "[4]": {
+          "used_in_answer": true,
+          "source": "Study_001_Clinical_Report.pdf",
+          "chunk_id": "study-001-chunk-002",
+          "verified": true
+        }
+      },
+      "sources": [
+        {
+          "citation": "[1]",
+          "source": "Study_001_Clinical_Report.pdf",
+          "chunk_id": "study-001-chunk-001",
+          "chunk_index": 1
+        },
+        {
+          "citation": "[2]",
+          "source": "Study_002_Clinical_Report.pdf",
+          "chunk_id": "study-002-chunk-001",
+          "chunk_index": 1
+        },
+        {
+          "citation": "[3]",
+          "source": "Study_002_Clinical_Report.pdf",
+          "chunk_id": "study-002-chunk-002",
+          "chunk_index": 2
+        },
+        {
+          "citation": "[4]",
+          "source": "Study_001_Clinical_Report.pdf",
+          "chunk_id": "study-001-chunk-002",
+          "chunk_index": 2
+        }
+      ],
+      "retrieved_chunks": [
+        {
+          "id": "faf021b7-cc7f-5b6b-9064-855c274bd2d0",
+          "chunk_id": "study-001-chunk-001",
+          "score": 0.7580788,
+          "text": "Study 001 evaluated the safety and efficacy of Drug X in adult patients with moderate disease.",
+          "metadata": {
+            "source": "Study_001_Clinical_Report.pdf",
+            "study_id": "STUDY-001",
+            "chunk_index": 1,
+            "section": null,
+            "page": null
+          }
+        },
+        {
+          "id": "d0d36902-fbe5-53c1-86d5-ed680527531f",
+          "chunk_id": "study-002-chunk-001",
+          "score": 0.70422107,
+          "text": "Study 002 compared Drug Y with placebo to evaluate its effectiveness and safety.",
+          "metadata": {
+            "source": "Study_002_Clinical_Report.pdf",
+            "study_id": "STUDY-002",
+            "chunk_index": 1,
+            "section": null,
+            "page": null
+          }
+        },
+        {
+          "id": "4fdf3761-675d-5829-a4a6-462e5e61e9ae",
+          "chunk_id": "study-002-chunk-002",
+          "score": 0.6583507,
+          "text": "The treatment group showed improvement in the primary clinical outcome compared with the placebo group.",
+          "metadata": {
+            "source": "Study_002_Clinical_Report.pdf",
+            "study_id": "STUDY-002",
+            "chunk_index": 2,
+            "section": null,
+            "page": null
+          }
+        },
+        {
+          "id": "a9f9f723-de31-5de6-b63b-af4439c45f6f",
+          "chunk_id": "study-001-chunk-002",
+          "score": 0.6535824,
+          "text": "The primary endpoint was the change in disease severity from baseline after twelve weeks of treatment.",
+          "metadata": {
+            "source": "Study_001_Clinical_Report.pdf",
+            "study_id": "STUDY-001",
+            "chunk_index": 2,
+            "section": null,
+            "page": null
+          }
+        }
+      ],
+      "usage": {
+        "input_tokens": 181,
+        "output_tokens": 51,
+        "estimated_cost": 5.775e-05,
+        "cache_hit": false,
+        "latency_ms": 39060.87
+      }
+    }
+  },
+  "3846c2bc1aa13180bcbf6ec2c0d34a6d2a91ca3ba52a3c510d84359d987d3c5f": {
+    "created_at": 1788769760.8586774,
+    "response": {
+      "request_id": "867c6aee-5d87-4521-addc-18e65a8f9e8f",
+      "answer": "The primary endpoint in Study 001 was the change in disease severity from baseline after twelve weeks of treatment [1].",
+      "citations": {
+        "[1]": {
+          "source": "Study_001_Clinical_Report.pdf",
+          "chunk_id": "study-001-chunk-002",
+          "chunk_index": 2,
+          "section": null,
+          "page": null,
+          "text": "The primary endpoint was the change in disease severity from baseline after twelve weeks of treatment."
+        },
+        "[2]": {
+          "source": "Study_001_Clinical_Report.pdf",
+          "chunk_id": "study-001-chunk-001",
+          "chunk_index": 1,
+          "section": null,
+          "page": null,
+          "text": "Study 001 evaluated the safety and efficacy of Drug X in adult patients with moderate disease."
+        },
+        "[3]": {
+          "source": "Study_002_Clinical_Report.pdf",
+          "chunk_id": "study-002-chunk-002",
+          "chunk_index": 2,
+          "section": null,
+          "page": null,
+          "text": "The treatment group showed improvement in the primary clinical outcome compared with the placebo group."
+        },
+        "[4]": {
+          "source": "Study_002_Clinical_Report.pdf",
+          "chunk_id": "study-002-chunk-001",
+          "chunk_index": 1,
+          "section": null,
+          "page": null,
+          "text": "Study 002 compared Drug Y with placebo to evaluate its effectiveness and safety."
+        }
+      },
+      "citation_verification": {
+        "[1]": {
+          "used_in_answer": true,
+          "source": "Study_001_Clinical_Report.pdf",
+          "chunk_id": "study-001-chunk-002",
+          "verified": true
+        },
+        "[2]": {
+          "used_in_answer": false,
+          "source": "Study_001_Clinical_Report.pdf",
+          "chunk_id": "study-001-chunk-001",
+          "verified": false
+        },
+        "[3]": {
+          "used_in_answer": false,
+          "source": "Study_002_Clinical_Report.pdf",
+          "chunk_id": "study-002-chunk-002",
+          "verified": false
+        },
+        "[4]": {
+          "used_in_answer": false,
+          "source": "Study_002_Clinical_Report.pdf",
+          "chunk_id": "study-002-chunk-001",
+          "verified": false
+        }
+      },
+      "sources": [
+        {
+          "citation": "[1]",
+          "source": "Study_001_Clinical_Report.pdf",
+          "chunk_id": "study-001-chunk-002",
+          "chunk_index": 2
+        },
+        {
+          "citation": "[2]",
+          "source": "Study_001_Clinical_Report.pdf",
+          "chunk_id": "study-001-chunk-001",
+          "chunk_index": 1
+        },
+        {
+          "citation": "[3]",
+          "source": "Study_002_Clinical_Report.pdf",
+          "chunk_id": "study-002-chunk-002",
+          "chunk_index": 2
+        },
+        {
+          "citation": "[4]",
+          "source": "Study_002_Clinical_Report.pdf",
+          "chunk_id": "study-002-chunk-001",
+          "chunk_index": 1
+        }
+      ],
+      "retrieved_chunks": [
+        {
+          "id": "a9f9f723-de31-5de6-b63b-af4439c45f6f",
+          "chunk_id": "study-001-chunk-002",
+          "score": 0.7404685,
+          "text": "The primary endpoint was the change in disease severity from baseline after twelve weeks of treatment.",
+          "metadata": {
+            "source": "Study_001_Clinical_Report.pdf",
+            "study_id": "STUDY-001",
+            "chunk_index": 2,
+            "section": null,
+            "page": null
+          }
+        },
+        {
+          "id": "faf021b7-cc7f-5b6b-9064-855c274bd2d0",
+          "chunk_id": "study-001-chunk-001",
+          "score": 0.7393734,
+          "text": "Study 001 evaluated the safety and efficacy of Drug X in adult patients with moderate disease.",
+          "metadata": {
+            "source": "Study_001_Clinical_Report.pdf",
+            "study_id": "STUDY-001",
+            "chunk_index": 1,
+            "section": null,
+            "page": null
+          }
+        },
+        {
+          "id": "4fdf3761-675d-5829-a4a6-462e5e61e9ae",
+          "chunk_id": "study-002-chunk-002",
+          "score": 0.71926016,
+          "text": "The treatment group showed improvement in the primary clinical outcome compared with the placebo group.",
+          "metadata": {
+            "source": "Study_002_Clinical_Report.pdf",
+            "study_id": "STUDY-002",
+            "chunk_index": 2,
+            "section": null,
+            "page": null
+          }
+        },
+        {
+          "id": "d0d36902-fbe5-53c1-86d5-ed680527531f",
+          "chunk_id": "study-002-chunk-001",
+          "score": 0.6740031,
+          "text": "Study 002 compared Drug Y with placebo to evaluate its effectiveness and safety.",
+          "metadata": {
+            "source": "Study_002_Clinical_Report.pdf",
+            "study_id": "STUDY-002",
+            "chunk_index": 1,
+            "section": null,
+            "page": null
+          }
+        }
+      ],
+      "usage": {
+        "input_tokens": 185,
+        "output_tokens": 29,
+        "estimated_cost": 4.515e-05,
+        "cache_hit": false,
+        "latency_ms": 42317.9
+      }
+    }
+  }
+}

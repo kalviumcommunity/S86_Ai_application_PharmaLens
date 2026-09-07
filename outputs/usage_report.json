@@ -1,0 +1,12 @@
+{
+  "generated_at": "2026-09-07T08:25:38.083563+00:00",
+  "total_requests": 2,
+  "cache_hits": 1,
+  "cache_misses": 1,
+  "cache_hit_rate": 0.5,
+  "total_input_tokens": 181,
+  "total_output_tokens": 51,
+  "total_estimated_cost": 5.775e-05,
+  "average_latency_ms": 19547.6,
+  "errors": 0
+}

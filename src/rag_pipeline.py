@@ -1,254 +1,856 @@
+"""
+PharmaLens RAG Pipeline
+
+Pipeline Flow:
+
+User Question
+    ->
+Cache Check
+    ->
+Query Embedding
+    ->
+Qdrant Retrieval
+    ->
+Context Assembly
+    ->
+Grounded Answer Generation
+    ->
+Citation Mapping
+    ->
+Logging and Usage Monitoring
+    ->
+Return Answer
+"""
+
 from __future__ import annotations
 
-from typing import Any
+import hashlib
+import json
+import logging
+import time
+import uuid
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Optional
 
+from openai import OpenAI
 from qdrant_client import QdrantClient
 
 from src.config import load_settings
-from src.hallucination_guardrails import assess_retrieval_quality
-from src.llm_client import create_client
 
 
-# ---------------------------------------------------------
+# ============================================================
+# PATH CONFIGURATION
+# ============================================================
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+OUTPUT_DIR = BASE_DIR / "outputs"
+OUTPUT_DIR.mkdir(exist_ok=True)
+
+LOG_DIR = OUTPUT_DIR / "logs"
+LOG_DIR.mkdir(exist_ok=True)
+
+CACHE_FILE = OUTPUT_DIR / "rag_cache.json"
+
+REQUEST_LOG_FILE = LOG_DIR / "rag_requests.jsonl"
+
+USAGE_REPORT_FILE = OUTPUT_DIR / "usage_report.json"
+
+
+# ============================================================
+# CACHE CONFIGURATION
+# ============================================================
+
+CACHE_TTL_SECONDS = 15 * 60
+
+
+# ============================================================
+# APPROXIMATE COST CONFIGURATION
+# ============================================================
+
+MODEL_INPUT_COST_PER_1K = 0.00015
+
+MODEL_OUTPUT_COST_PER_1K = 0.00060
+
+
+# ============================================================
+# LOGGER
+# ============================================================
+
+logger = logging.getLogger("pharmalens_rag")
+
+logger.setLevel(logging.INFO)
+
+if not logger.handlers:
+
+    console_handler = logging.StreamHandler()
+
+    console_handler.setLevel(logging.INFO)
+
+    formatter = logging.Formatter(
+        "%(asctime)s - %(levelname)s - %(message)s"
+    )
+
+    console_handler.setFormatter(formatter)
+
+    logger.addHandler(console_handler)
+
+
+# ============================================================
 # SETTINGS
-# ---------------------------------------------------------
+# ============================================================
 
-settings = load_settings(
-    require_chat=True,
-    require_embedding=True,
-    require_vector_db=True,
-)
-
-client = create_client(settings)
-
-qdrant_client = QdrantClient(
-    url=settings["qdrant_url"]
-)
-
-COLLECTION_NAME = settings["qdrant_collection"]
-EMBED_MODEL = settings["embed_model"]
-CHAT_MODEL = settings["chat_model"]
-
-
-# ---------------------------------------------------------
-# 1. QUERY EMBEDDING
-# ---------------------------------------------------------
-
-def embed_query(query: str) -> list[float]:
+def get_settings() -> dict[str, str | int]:
     """
-    Convert the user's query into an embedding vector.
+    Load all settings required for the RAG pipeline.
     """
 
-    if not query.strip():
-        raise ValueError("Query cannot be empty.")
-
-    response = client.embeddings.create(
-        model=EMBED_MODEL,
-        input=query,
+    return load_settings(
+        require_chat=True,
+        require_embedding=True,
+        require_vector_db=True,
     )
 
-    return response.data[0].embedding
+
+# ============================================================
+# CLIENTS
+# ============================================================
+
+def create_embedding_client(
+    settings: dict[str, str | int],
+) -> OpenAI:
+    """
+    Create OpenAI-compatible embedding client.
+    """
+
+    return OpenAI(
+        api_key=str(settings["openai_api_key"]),
+        base_url=str(settings["openai_base_url"]),
+    )
 
 
-# ---------------------------------------------------------
-# 2. RETRIEVAL
-# ---------------------------------------------------------
+def create_chat_client(
+    settings: dict[str, str | int],
+) -> OpenAI:
+    """
+    Create OpenAI-compatible chat client.
+    """
 
-def retrieve_chunks(
+    return OpenAI(
+        api_key=str(settings["openai_api_key"]),
+        base_url=str(settings["openai_base_url"]),
+    )
+
+
+def create_qdrant_client(
+    settings: dict[str, str | int],
+) -> QdrantClient:
+    """
+    Create Qdrant client.
+    """
+
+    return QdrantClient(
+        url=str(settings["qdrant_url"])
+    )
+
+
+# ============================================================
+# CACHE
+# ============================================================
+
+def load_cache() -> dict[str, Any]:
+    """
+    Load persistent query cache.
+    """
+
+    if not CACHE_FILE.exists():
+        return {}
+
+    try:
+
+        with open(
+            CACHE_FILE,
+            "r",
+            encoding="utf-8",
+        ) as file:
+
+            return json.load(file)
+
+    except Exception as error:
+
+        logger.warning(
+            "Could not load cache: %s",
+            error,
+        )
+
+        return {}
+
+
+def save_cache(
+    cache: dict[str, Any],
+) -> None:
+    """
+    Save persistent query cache.
+    """
+
+    try:
+
+        with open(
+            CACHE_FILE,
+            "w",
+            encoding="utf-8",
+        ) as file:
+
+            json.dump(
+                cache,
+                file,
+                indent=2,
+                ensure_ascii=False,
+            )
+
+    except Exception as error:
+
+        logger.error(
+            "Could not save cache: %s",
+            error,
+        )
+
+
+def cache_key(
+    question: str,
+    k: int = 4,
+    filters: Optional[dict[str, Any]] = None,
+) -> str:
+    """
+    Create stable cache key.
+
+    The question, retrieval count, and filters
+    are included so different settings do not
+    incorrectly share cached responses.
+    """
+
+    data = {
+        "question": question.strip().lower(),
+        "k": k,
+        "filters": filters or {},
+    }
+
+    raw = json.dumps(
+        data,
+        sort_keys=True,
+    )
+
+    return hashlib.sha256(
+        raw.encode("utf-8")
+    ).hexdigest()
+
+
+def get_cached_answer(
+    question: str,
+    k: int = 4,
+    filters: Optional[dict[str, Any]] = None,
+) -> Optional[dict[str, Any]]:
+    """
+    Return cached response if available
+    and not expired.
+    """
+
+    cache = load_cache()
+
+    key = cache_key(
+        question,
+        k,
+        filters,
+    )
+
+    cached = cache.get(key)
+
+    if not cached:
+        return None
+
+    created_at = cached.get(
+        "created_at",
+        0,
+    )
+
+    if (
+        time.time() - created_at
+        > CACHE_TTL_SECONDS
+    ):
+
+        logger.info(
+            "Cache entry expired."
+        )
+
+        cache.pop(
+            key,
+            None,
+        )
+
+        save_cache(cache)
+
+        return None
+
+    logger.info(
+        "Cache HIT."
+    )
+
+    return cached.get(
+        "response"
+    )
+
+
+def save_cached_answer(
+    question: str,
+    response: dict[str, Any],
+    k: int = 4,
+    filters: Optional[dict[str, Any]] = None,
+) -> None:
+    """
+    Save response to cache.
+    """
+
+    cache = load_cache()
+
+    key = cache_key(
+        question,
+        k,
+        filters,
+    )
+
+    cache[key] = {
+        "created_at": time.time(),
+        "response": response,
+    }
+
+    save_cache(cache)
+
+    logger.info(
+        "Response saved to cache."
+    )
+
+
+# ============================================================
+# TOKEN ESTIMATION
+# ============================================================
+
+def estimate_tokens(
+    text: str,
+) -> int:
+    """
+    Approximate token count.
+
+    Rough estimate:
+    1 token ~= 4 characters.
+    """
+
+    if not text:
+        return 0
+
+    return max(
+        1,
+        len(text) // 4,
+    )
+
+
+def estimate_cost(
+    input_tokens: int,
+    output_tokens: int,
+) -> float:
+    """
+    Estimate approximate request cost.
+    """
+
+    input_cost = (
+        input_tokens / 1000
+    ) * MODEL_INPUT_COST_PER_1K
+
+    output_cost = (
+        output_tokens / 1000
+    ) * MODEL_OUTPUT_COST_PER_1K
+
+    return round(
+        input_cost + output_cost,
+        8,
+    )
+
+
+# ============================================================
+# STRUCTURED LOGGING
+# ============================================================
+
+def write_request_log(
+    record: dict[str, Any],
+) -> None:
+    """
+    Write request record as JSONL.
+    """
+
+    try:
+
+        with open(
+            REQUEST_LOG_FILE,
+            "a",
+            encoding="utf-8",
+        ) as file:
+
+            file.write(
+                json.dumps(
+                    record,
+                    ensure_ascii=False,
+                )
+                + "\n"
+            )
+
+    except Exception as error:
+
+        logger.error(
+            "Failed to write request log: %s",
+            error,
+        )
+
+
+def log_rag_request(
+    request_id: str,
+    question: str,
+    answer: str,
+    sources: list[dict[str, Any]],
+    cache_hit: bool,
+    input_tokens: int,
+    output_tokens: int,
+    estimated_cost: float,
+    latency_ms: float,
+    error: Optional[str] = None,
+) -> None:
+    """
+    Create structured log record.
+    """
+
+    record = {
+        "timestamp": datetime.now(
+            timezone.utc
+        ).isoformat(),
+
+        "request_id": request_id,
+
+        "question": question,
+
+        "answer_preview": answer[:300],
+
+        "sources": sources,
+
+        "cache_hit": cache_hit,
+
+        "input_tokens": input_tokens,
+
+        "output_tokens": output_tokens,
+
+        "estimated_cost": estimated_cost,
+
+        "latency_ms": round(
+            latency_ms,
+            2,
+        ),
+
+        "error": error,
+    }
+
+    write_request_log(record)
+
+    logger.info(
+        json.dumps(
+            record,
+            ensure_ascii=False,
+        )
+    )
+
+
+# ============================================================
+# USAGE REPORT
+# ============================================================
+
+def load_request_logs() -> list[dict[str, Any]]:
+    """
+    Load structured request logs.
+    """
+
+    if not REQUEST_LOG_FILE.exists():
+        return []
+
+    records: list[dict[str, Any]] = []
+
+    try:
+
+        with open(
+            REQUEST_LOG_FILE,
+            "r",
+            encoding="utf-8",
+        ) as file:
+
+            for line in file:
+
+                line = line.strip()
+
+                if not line:
+                    continue
+
+                try:
+
+                    records.append(
+                        json.loads(line)
+                    )
+
+                except json.JSONDecodeError:
+
+                    continue
+
+    except Exception as error:
+
+        logger.error(
+            "Could not read logs: %s",
+            error,
+        )
+
+    return records
+
+
+def summarize_usage(
+    log_records: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """
+    Generate usage summary.
+    """
+
+    total_requests = len(log_records)
+
+    if total_requests == 0:
+
+        return {
+            "generated_at": datetime.now(
+                timezone.utc
+            ).isoformat(),
+
+            "total_requests": 0,
+
+            "cache_hits": 0,
+
+            "cache_misses": 0,
+
+            "cache_hit_rate": 0.0,
+
+            "total_input_tokens": 0,
+
+            "total_output_tokens": 0,
+
+            "total_estimated_cost": 0.0,
+
+            "average_latency_ms": 0.0,
+
+            "errors": 0,
+        }
+
+    cache_hits = sum(
+        1
+        for item in log_records
+        if item.get("cache_hit")
+    )
+
+    total_input_tokens = sum(
+        item.get(
+            "input_tokens",
+            0,
+        )
+        for item in log_records
+    )
+
+    total_output_tokens = sum(
+        item.get(
+            "output_tokens",
+            0,
+        )
+        for item in log_records
+    )
+
+    total_cost = sum(
+        item.get(
+            "estimated_cost",
+            0.0,
+        )
+        for item in log_records
+    )
+
+    total_latency = sum(
+        item.get(
+            "latency_ms",
+            0.0,
+        )
+        for item in log_records
+    )
+
+    errors = sum(
+        1
+        for item in log_records
+        if item.get("error")
+    )
+
+    return {
+        "generated_at": datetime.now(
+            timezone.utc
+        ).isoformat(),
+
+        "total_requests": total_requests,
+
+        "cache_hits": cache_hits,
+
+        "cache_misses": (
+            total_requests
+            - cache_hits
+        ),
+
+        "cache_hit_rate": round(
+            cache_hits / total_requests,
+            2,
+        ),
+
+        "total_input_tokens": (
+            total_input_tokens
+        ),
+
+        "total_output_tokens": (
+            total_output_tokens
+        ),
+
+        "total_estimated_cost": round(
+            total_cost,
+            8,
+        ),
+
+        "average_latency_ms": round(
+            total_latency
+            / total_requests,
+            2,
+        ),
+
+        "errors": errors,
+    }
+
+
+def generate_usage_report() -> dict[str, Any]:
+    """
+    Generate and save usage report.
+    """
+
+    logs = load_request_logs()
+
+    report = summarize_usage(logs)
+
+    with open(
+        USAGE_REPORT_FILE,
+        "w",
+        encoding="utf-8",
+    ) as file:
+
+        json.dump(
+            report,
+            file,
+            indent=2,
+        )
+
+    return report
+
+
+# ============================================================
+# STAGE 1 - QUERY EMBEDDING
+# ============================================================
+
+def embed_query(
+    query: str,
+    embedding_client: OpenAI,
+    embedding_model: str,
+) -> list[float]:
+    """
+    Convert query into embedding vector.
+    """
+
+    logger.info(
+        "Generating query embedding."
+    )
+
+    response = (
+        embedding_client
+        .embeddings
+        .create(
+            model=embedding_model,
+            input=query,
+        )
+    )
+
+    return (
+        response
+        .data[0]
+        .embedding
+    )
+
+
+# ============================================================
+# STAGE 2 - RETRIEVAL
+# ============================================================
+
+def retrieve_context(
     query_vector: list[float],
-    k: int = 3,
-) -> list[dict[str, Any]]:
+    qdrant_client: QdrantClient,
+    collection_name: str,
+    k: int = 4,
+) -> list[Any]:
     """
-    Retrieve the most relevant corpus chunks from Qdrant.
+    Retrieve top-k chunks from Qdrant.
     """
 
-    if k <= 0:
-        raise ValueError("k must be greater than 0.")
-
-    search_limit = max(k * 3, k)
-
-    response = qdrant_client.query_points(
-        collection_name=COLLECTION_NAME,
-        query=query_vector,
-        limit=search_limit,
-        with_payload=True,
-        with_vectors=False,
+    logger.info(
+        "Retrieving top %s chunks.",
+        k,
     )
 
-    chunks = []
-
-    for point in response.points:
-
-        payload = point.payload or {}
-
-        # Ignore temporary test records.
-        original_chunk_id = payload.get(
-            "original_chunk_id"
+    results = (
+        qdrant_client
+        .query_points(
+            collection_name=collection_name,
+            query=query_vector,
+            limit=k,
+            with_payload=True,
+            with_vectors=False,
         )
+    )
 
-        if not original_chunk_id:
-            continue
+    return results.points
 
-        metadata = payload.get(
-            "metadata",
-            {}
-        )
 
-        text = payload.get(
+# ============================================================
+# CHUNK NORMALIZATION
+# ============================================================
+
+def normalize_chunk(
+    point: Any,
+) -> dict[str, Any]:
+    """
+    Convert Qdrant result into
+    consistent chunk format.
+    """
+
+    payload = point.payload or {}
+
+    metadata = payload.get(
+        "metadata",
+        {},
+    )
+
+    chunk_id = payload.get(
+        "original_chunk_id",
+        str(point.id),
+    )
+
+    return {
+        "id": str(point.id),
+
+        "chunk_id": chunk_id,
+
+        "score": point.score,
+
+        "text": payload.get(
             "text",
-            ""
-        )
+            "",
+        ),
 
-        chunks.append(
-            {
-                "id": original_chunk_id,
-                "score": point.score,
-                "text": text,
-                "metadata": metadata,
-            }
-        )
-
-        if len(chunks) >= k:
-            break
-
-    return chunks
+        "metadata": metadata,
+    }
 
 
-# ---------------------------------------------------------
-# 3. CONTEXT ASSEMBLY
-# ---------------------------------------------------------
+# ============================================================
+# STAGE 3 - CONTEXT ASSEMBLY
+# ============================================================
 
 def assemble_context(
     chunks: list[dict[str, Any]],
-) -> tuple[str, dict[str, dict[str, Any]]]:
+) -> str:
     """
-    Build context for the LLM and create a citation map.
-
-    Example:
-
-    [1] Source: Study_001_Clinical_Report.pdf
-    Chunk ID: study-001-chunk-001
-    ...
-
-    Returns:
-        context
-        citation_map
+    Build context with citation markers.
     """
 
-    if not chunks:
-        return "", {}
-
-    parts = []
-    citation_map = {}
+    parts: list[str] = []
 
     for index, chunk in enumerate(
         chunks,
         start=1,
     ):
 
-        marker = f"[{index}]"
-
         metadata = chunk.get(
             "metadata",
-            {}
+            {},
         )
 
         source = metadata.get(
             "source",
-            "Unknown source"
+            "Unknown Source",
         )
 
-        chunk_id = metadata.get(
+        chunk_id = chunk.get(
             "chunk_id",
-            chunk.get("id")
-        )
-
-        chunk_index = metadata.get(
-            "chunk_index"
-        )
-
-        section = metadata.get(
-            "section"
-        )
-
-        page = metadata.get(
-            "page"
+            chunk.get("id"),
         )
 
         text = chunk.get(
             "text",
-            ""
+            "",
         )
 
-        # Context sent to the model
         parts.append(
-            f"{marker} Source: {source}\n"
+            f"[{index}]\n"
+            f"Source: {source}\n"
             f"Chunk ID: {chunk_id}\n"
-            f"{text}"
+            f"Text: {text}"
         )
 
-        # Citation information returned to user
-        citation_map[marker] = {
-            "source": source,
-            "chunk_id": chunk_id,
-            "chunk_index": chunk_index,
-            "section": section,
-            "page": page,
-            "text": text,
-        }
-
-    context = "\n\n".join(parts)
-
-    return context, citation_map
+    return "\n\n".join(parts)
 
 
-# ---------------------------------------------------------
-# 4. CITATION MAP
-# ---------------------------------------------------------
+# ============================================================
+# CITATION MAP
+# ============================================================
 
 def build_citation_map(
     chunks: list[dict[str, Any]],
 ) -> dict[str, dict[str, Any]]:
     """
-    Create a stable citation marker for every retrieved chunk.
-
-    Example:
-
-    {
-        "[1]": {
-            "source": "...",
-            "chunk_id": "...",
-            "chunk_index": 1,
-            "section": "...",
-            "page": 1,
-            "text": "..."
-        }
-    }
+    Map citation markers to real metadata.
     """
 
-    citation_map = {}
+    citation_map: dict[
+        str,
+        dict[str, Any]
+    ] = {}
 
     for index, chunk in enumerate(
         chunks,
         start=1,
     ):
 
-        marker = f"[{index}]"
-
         metadata = chunk.get(
             "metadata",
-            {}
+            {},
         )
 
-        citation_map[marker] = {
+        citation_map[
+            f"[{index}]"
+        ] = {
+
             "source": metadata.get(
-                "source",
-                "Unknown source"
+                "source"
             ),
 
-            "chunk_id": metadata.get(
+            "chunk_id": chunk.get(
                 "chunk_id",
-                chunk.get("id")
+                chunk.get("id"),
             ),
 
             "chunk_index": metadata.get(
@@ -264,419 +866,934 @@ def build_citation_map(
             ),
 
             "text": chunk.get(
-                "text",
-                ""
+                "text"
             ),
         }
 
     return citation_map
 
 
-# ---------------------------------------------------------
-# 5. CITED PROMPT
-# ---------------------------------------------------------
+# ============================================================
+# STAGE 4 - ANSWER GENERATION
+# ============================================================
 
-def build_cited_prompt(
+def generate_cited_answer(
     question: str,
     chunks: list[dict[str, Any]],
+    chat_client: OpenAI,
+    chat_model: str,
 ) -> str:
     """
-    Build a prompt that forces the model to use only
-    retrieved sources and valid citation markers.
+    Generate grounded answer using
+    only retrieved context.
     """
 
-    context, citation_map = assemble_context(
-        chunks
-    )
+    context = assemble_context(chunks)
 
-    if not citation_map:
-        return ""
-
-    available_markers = ", ".join(
-        citation_map.keys()
-    )
-
-    return f"""
+    prompt = f"""
 You are PharmaLens, a clinical research intelligence assistant.
 
-Answer the user's question using ONLY the provided context.
+Answer the user's question using ONLY the retrieved context.
 
-Citation rules:
-1. Cite every factual claim using a citation marker such as [1] or [2].
-2. Only use citation markers that are provided in the context.
-3. Available citation markers are: {available_markers}
-4. Never create or invent citation markers.
-5. Never cite a source that is not provided in the context.
-6. If the context does not contain enough information to answer,
-   say that you do not have enough information.
-7. Do not use outside knowledge.
-8. Keep the answer concise and factual.
+Rules:
 
-Context:
+1. Use only the information in the retrieved context.
+2. Do not add outside knowledge.
+3. Cite factual claims using [1], [2], etc.
+4. Only use citation markers provided in the context.
+5. Do not invent citations.
+6. If the context is insufficient, say exactly:
+
+"I don't have enough information in the retrieved context to answer this question."
+
+Retrieved Context:
+
 {context}
 
 Question:
+
 {question}
 
 Answer:
 """
 
-
-# ---------------------------------------------------------
-# 6. GROUNDED GENERATION WITH CITATIONS
-# ---------------------------------------------------------
-
-def generate_cited_answer(
-    question: str,
-    chunks: list[dict[str, Any]],
-) -> str:
-    """
-    Generate an answer containing citations.
-    """
-
-    prompt = build_cited_prompt(
-        question,
-        chunks,
+    logger.info(
+        "Generating grounded answer."
     )
 
-    if not prompt:
-        return (
-            "I don't have enough information "
-            "in the provided context."
+    response = (
+        chat_client
+        .chat
+        .completions
+        .create(
+            model=chat_model,
+
+            messages=[
+                {
+                    "role": "system",
+
+                    "content": (
+                        "You are a grounded RAG assistant. "
+                        "Use only the provided context."
+                    ),
+                },
+
+                {
+                    "role": "user",
+
+                    "content": prompt,
+                },
+            ],
+
+            temperature=0,
         )
-
-    response = client.chat.completions.create(
-        model=CHAT_MODEL,
-        messages=[
-            {
-                "role": "user",
-                "content": prompt,
-            }
-        ],
     )
 
-    answer = response.choices[0].message.content
+    answer = (
+        response
+        .choices[0]
+        .message
+        .content
+    )
 
     if not answer:
+
         return (
-            "The model did not return an answer."
+            "I don't have enough information "
+            "in the retrieved context to answer "
+            "this question."
         )
 
     return answer.strip()
 
 
-# ---------------------------------------------------------
-# 7. VERIFY CITATION
-# ---------------------------------------------------------
+# ============================================================
+# SOURCE EXTRACTION
+# ============================================================
 
-def verify_citation(
-    citation_marker: str,
-    citation_map: dict[str, dict[str, Any]],
-) -> dict[str, Any]:
+def extract_sources(
+    citation_map: dict[
+        str,
+        dict[str, Any]
+    ],
+) -> list[dict[str, Any]]:
     """
-    Verify that a citation exists and maps to real
-    retrieved source text.
+    Create simple source list.
     """
 
-    citation = citation_map.get(
-        citation_marker
-    )
+    sources: list[
+        dict[str, Any]
+    ] = []
 
-    if not citation:
-        return {
-            "valid": False,
-            "reason": "Citation marker does not exist.",
-        }
+    for marker, citation in (
+        citation_map.items()
+    ):
 
-    source = citation.get(
-        "source"
-    )
+        sources.append(
+            {
+                "citation": marker,
 
-    text = citation.get(
-        "text"
-    )
+                "source": citation.get(
+                    "source"
+                ),
 
-    if not source:
-        return {
-            "valid": False,
-            "reason": "Citation has no source.",
-        }
+                "chunk_id": citation.get(
+                    "chunk_id"
+                ),
 
-    if not text:
-        return {
-            "valid": False,
-            "reason": "Citation has no source text.",
-        }
+                "chunk_index": citation.get(
+                    "chunk_index"
+                ),
+            }
+        )
 
-    return {
-        "valid": True,
-        "source": source,
-        "chunk_id": citation.get(
-            "chunk_id"
-        ),
-        "chunk_index": citation.get(
-            "chunk_index"
-        ),
-        "section": citation.get(
-            "section"
-        ),
-        "page": citation.get(
-            "page"
-        ),
-        "text": text,
-    }
+    return sources
 
 
-# ---------------------------------------------------------
-# 8. EXTRACT CITATION MARKERS
-# ---------------------------------------------------------
+# ============================================================
+# CITATION VERIFICATION
+# ============================================================
 
-def extract_citation_markers(
+def verify_citations(
     answer: str,
-) -> list[str]:
+    citation_map: dict[
+        str,
+        dict[str, Any]
+    ],
+) -> dict[str, dict[str, Any]]:
     """
-    Extract citation markers such as [1], [2], [3]
-    from the generated answer.
+    Verify citations used in the answer.
+
+    A citation is considered verified when:
+    - The marker appears in the answer.
+    - The marker exists in the citation map.
+    - The mapped chunk contains original text.
     """
 
-    import re
+    verification: dict[
+        str,
+        dict[str, Any]
+    ] = {}
 
-    markers = re.findall(
-        r"\[\d+\]",
-        answer,
-    )
+    for marker, citation in (
+        citation_map.items()
+    ):
 
-    # Remove duplicates while preserving order.
-    return list(
-        dict.fromkeys(markers)
-    )
+        used = marker in answer
+
+        verification[marker] = {
+
+            "used_in_answer": used,
+
+            "source": citation.get(
+                "source"
+            ),
+
+            "chunk_id": citation.get(
+                "chunk_id"
+            ),
+
+            "verified": (
+                used
+                and bool(
+                    citation.get("text")
+                )
+            ),
+        }
+
+    return verification
 
 
-# ---------------------------------------------------------
-# 9. COMPLETE CITATION PIPELINE
-# ---------------------------------------------------------
+# ============================================================
+# FULL RAG PIPELINE
+# ============================================================
 
 def answer_with_citations(
     question: str,
     k: int = 4,
-    relevance_threshold: float = 0.65,
-    min_relevant_chunks: int = 1,
+    filters: Optional[
+        dict[str, Any]
+    ] = None,
+    use_cache: bool = True,
 ) -> dict[str, Any]:
     """
-    Complete citation-aware RAG pipeline.
+    Complete RAG pipeline.
 
     Flow:
 
     Question
-        ↓
-    Query Embedding
-        ↓
-    Retrieval
-        ↓
-    Citation Mapping
-        ↓
-    Grounded Generation
-        ↓
-    Citation Verification
-        ↓
-    Answer + Citations
+        ->
+    Cache
+        ->
+    Embed
+        ->
+    Retrieve
+        ->
+    Generate
+        ->
+    Citations
+        ->
+    Logging
+        ->
+    Return
     """
 
-    # Stage 1
-    query_vector = embed_query(
-        question
+    request_id = str(
+        uuid.uuid4()
     )
 
-    # Stage 2
-    chunks = retrieve_chunks(
-        query_vector,
-        k=k,
-    )
+    start_time = time.perf_counter()
 
-    retrieval_quality = assess_retrieval_quality(
-        chunks,
-        relevance_threshold=relevance_threshold,
-        min_relevant_chunks=min_relevant_chunks,
-    )
+    try:
 
-    # Refuse before calling the LLM when retrieval cannot support an answer.
-    if not retrieval_quality["is_sufficient"]:
-        return {
-            "answer": (
-                "I don't have enough information "
-                "in the provided context."
-            ),
-            "citations": {},
-            "verified_citations": {},
-            "retrieved_chunks": chunks,
-            "retrieval_quality": retrieval_quality,
-        }
+        # ====================================================
+        # CACHE CHECK
+        # ====================================================
 
-    # Stage 3
-    citation_map = build_citation_map(
-        chunks
-    )
+        if use_cache:
 
-    # Stage 4
-    answer = generate_cited_answer(
-        question,
-        chunks,
-    )
+            cached_response = (
+                get_cached_answer(
+                    question=question,
+                    k=k,
+                    filters=filters,
+                )
+            )
 
-    # Stage 5
-    markers = extract_citation_markers(
-        answer
-    )
+            if cached_response:
 
-    verified_citations = {}
+                latency_ms = (
+                    time.perf_counter()
+                    - start_time
+                ) * 1000
 
-    for marker in markers:
+                # Create a copy so the
+                # stored cached response
+                # is not permanently modified.
+                result = json.loads(
+                    json.dumps(
+                        cached_response
+                    )
+                )
 
-        verification = verify_citation(
-            marker,
-            citation_map,
+                result["request_id"] = (
+                    request_id
+                )
+
+                result.setdefault(
+                    "usage",
+                    {}
+                )
+
+                result["usage"][
+                    "cache_hit"
+                ] = True
+
+                result["usage"][
+                    "latency_ms"
+                ] = round(
+                    latency_ms,
+                    2,
+                )
+
+                log_rag_request(
+                    request_id=request_id,
+
+                    question=question,
+
+                    answer=result.get(
+                        "answer",
+                        "",
+                    ),
+
+                    sources=result.get(
+                        "sources",
+                        [],
+                    ),
+
+                    cache_hit=True,
+
+                    input_tokens=0,
+
+                    output_tokens=0,
+
+                    estimated_cost=0.0,
+
+                    latency_ms=latency_ms,
+                )
+
+                return result
+
+
+        # ====================================================
+        # SETTINGS
+        # ====================================================
+
+        settings = get_settings()
+
+
+        # ====================================================
+        # CLIENTS
+        # ====================================================
+
+        embedding_client = (
+            create_embedding_client(
+                settings
+            )
         )
 
-        if verification["valid"]:
-            verified_citations[
-                marker
-            ] = verification
+        chat_client = (
+            create_chat_client(
+                settings
+            )
+        )
 
-    return {
-        "question": question,
-        "answer": answer,
-        "citations": citation_map,
-        "verified_citations": verified_citations,
-        "retrieved_chunks": chunks,
-        "retrieval_quality": retrieval_quality,
-    }
+        qdrant_client = (
+            create_qdrant_client(
+                settings
+            )
+        )
 
 
-# ---------------------------------------------------------
-# 10. DISPLAY RESULT
-# ---------------------------------------------------------
+        # ====================================================
+        # EMBEDDING
+        # ====================================================
 
-def print_citation_result(
+        query_vector = (
+            embed_query(
+                query=question,
+
+                embedding_client=(
+                    embedding_client
+                ),
+
+                embedding_model=str(
+                    settings["embed_model"]
+                ),
+            )
+        )
+
+
+        # ====================================================
+        # RETRIEVAL
+        # ====================================================
+
+        retrieved_points = (
+            retrieve_context(
+                query_vector=query_vector,
+
+                qdrant_client=(
+                    qdrant_client
+                ),
+
+                collection_name=str(
+                    settings[
+                        "qdrant_collection"
+                    ]
+                ),
+
+                k=k,
+            )
+        )
+
+
+        # ====================================================
+        # EMPTY RETRIEVAL FALLBACK
+        # ====================================================
+
+        if not retrieved_points:
+
+            answer = (
+                "I don't have enough information "
+                "in the retrieved context to answer "
+                "this question."
+            )
+
+            latency_ms = (
+                time.perf_counter()
+                - start_time
+            ) * 1000
+
+            result = {
+                "request_id": request_id,
+
+                "answer": answer,
+
+                "citations": {},
+
+                "citation_verification": {},
+
+                "sources": [],
+
+                "retrieved_chunks": [],
+
+                "usage": {
+                    "input_tokens": 0,
+
+                    "output_tokens": 0,
+
+                    "estimated_cost": 0.0,
+
+                    "cache_hit": False,
+
+                    "latency_ms": round(
+                        latency_ms,
+                        2,
+                    ),
+                },
+            }
+
+            log_rag_request(
+                request_id=request_id,
+
+                question=question,
+
+                answer=answer,
+
+                sources=[],
+
+                cache_hit=False,
+
+                input_tokens=0,
+
+                output_tokens=0,
+
+                estimated_cost=0.0,
+
+                latency_ms=latency_ms,
+            )
+
+            return result
+
+
+        # ====================================================
+        # NORMALIZE CHUNKS
+        # ====================================================
+
+        chunks = [
+            normalize_chunk(point)
+            for point in retrieved_points
+        ]
+
+
+        # ====================================================
+        # GENERATE ANSWER
+        # ====================================================
+
+        answer = (
+            generate_cited_answer(
+                question=question,
+
+                chunks=chunks,
+
+                chat_client=chat_client,
+
+                chat_model=str(
+                    settings["chat_model"]
+                ),
+            )
+        )
+
+
+        # ====================================================
+        # CITATIONS
+        # ====================================================
+
+        citation_map = (
+            build_citation_map(
+                chunks
+            )
+        )
+
+        sources = (
+            extract_sources(
+                citation_map
+            )
+        )
+
+        citation_verification = (
+            verify_citations(
+                answer,
+                citation_map,
+            )
+        )
+
+
+        # ====================================================
+        # TOKEN MONITORING
+        # ====================================================
+
+        context = assemble_context(
+            chunks
+        )
+
+        input_tokens = (
+            estimate_tokens(
+                question
+                + "\n"
+                + context
+            )
+        )
+
+        output_tokens = (
+            estimate_tokens(
+                answer
+            )
+        )
+
+        estimated_cost = (
+            estimate_cost(
+                input_tokens,
+                output_tokens,
+            )
+        )
+
+
+        # ====================================================
+        # LATENCY
+        # ====================================================
+
+        latency_ms = (
+            time.perf_counter()
+            - start_time
+        ) * 1000
+
+
+        # ====================================================
+        # FINAL RESULT
+        # ====================================================
+
+        result = {
+            "request_id": request_id,
+
+            "answer": answer,
+
+            "citations": citation_map,
+
+            "citation_verification": (
+                citation_verification
+            ),
+
+            "sources": sources,
+
+            "retrieved_chunks": chunks,
+
+            "usage": {
+                "input_tokens": (
+                    input_tokens
+                ),
+
+                "output_tokens": (
+                    output_tokens
+                ),
+
+                "estimated_cost": (
+                    estimated_cost
+                ),
+
+                "cache_hit": False,
+
+                "latency_ms": round(
+                    latency_ms,
+                    2,
+                ),
+            },
+        }
+
+
+        # ====================================================
+        # SAVE CACHE
+        # ====================================================
+
+        if use_cache:
+
+            save_cached_answer(
+                question=question,
+
+                response=result,
+
+                k=k,
+
+                filters=filters,
+            )
+
+
+        # ====================================================
+        # LOG REQUEST
+        # ====================================================
+
+        log_rag_request(
+            request_id=request_id,
+
+            question=question,
+
+            answer=answer,
+
+            sources=sources,
+
+            cache_hit=False,
+
+            input_tokens=input_tokens,
+
+            output_tokens=output_tokens,
+
+            estimated_cost=estimated_cost,
+
+            latency_ms=latency_ms,
+        )
+
+
+        return result
+
+
+    # ========================================================
+    # ERROR HANDLING
+    # ========================================================
+
+    except Exception as error:
+
+        latency_ms = (
+            time.perf_counter()
+            - start_time
+        ) * 1000
+
+        logger.exception(
+            "RAG pipeline failed."
+        )
+
+        fallback_answer = (
+            "The RAG pipeline encountered an error "
+            "while processing the request."
+        )
+
+        log_rag_request(
+            request_id=request_id,
+
+            question=question,
+
+            answer=fallback_answer,
+
+            sources=[],
+
+            cache_hit=False,
+
+            input_tokens=0,
+
+            output_tokens=0,
+
+            estimated_cost=0.0,
+
+            latency_ms=latency_ms,
+
+            error=str(error),
+        )
+
+        return {
+            "request_id": request_id,
+
+            "answer": fallback_answer,
+
+            "citations": {},
+
+            "citation_verification": {},
+
+            "sources": [],
+
+            "retrieved_chunks": [],
+
+            "error": str(error),
+
+            "usage": {
+                "input_tokens": 0,
+
+                "output_tokens": 0,
+
+                "estimated_cost": 0.0,
+
+                "cache_hit": False,
+
+                "latency_ms": round(
+                    latency_ms,
+                    2,
+                ),
+            },
+        }
+
+
+# ============================================================
+# PRINT RESULT
+# ============================================================
+
+def print_result(
     result: dict[str, Any],
 ) -> None:
     """
-    Display the citation-aware answer and
-    citation-to-source mappings.
+    Print pipeline result.
     """
 
     print()
+
     print("=" * 70)
-    print("PHARMALENS SOURCE CITATION PIPELINE")
-    print("=" * 70)
 
-    print()
-    print("Question:")
-    print(result.get("question"))
-
-    print()
-    print("Generated Answer:")
-    print(result["answer"])
-
-    print()
-    print("Citation Mapping:")
-    print("-" * 70)
-
-    citations = result.get(
-        "citations",
-        {}
+    print(
+        "PHARMALENS RAG RESPONSE"
     )
 
-    for marker, citation in citations.items():
-
-        print()
-        print(marker)
-
-        print(
-            f"Source: "
-            f"{citation['source']}"
-        )
-
-        print(
-            f"Chunk ID: "
-            f"{citation['chunk_id']}"
-        )
-
-        print(
-            f"Chunk Index: "
-            f"{citation['chunk_index']}"
-        )
-
-        print(
-            f"Section: "
-            f"{citation['section']}"
-        )
-
-        print(
-            f"Page: "
-            f"{citation['page']}"
-        )
-
-        print(
-            f"Original Text: "
-            f"{citation['text']}"
-        )
+    print("=" * 70)
 
     print()
-    print("Citation Verification:")
-    print("-" * 70)
 
-    verified = result.get(
-        "verified_citations",
-        {}
+    print("Request ID:")
+
+    print(
+        result.get(
+            "request_id"
+        )
     )
 
-    if not verified:
-        print(
-            "No valid citations were found "
-            "in the generated answer."
+    print()
+
+    print("Answer:")
+
+    print(
+        result.get(
+            "answer"
         )
+    )
+
+    print()
+
+    print("Sources:")
+
+    sources = result.get(
+        "sources",
+        [],
+    )
+
+    if not sources:
+
+        print(
+            "No sources retrieved."
+        )
+
     else:
-        for marker, citation in verified.items():
+
+        for source in sources:
 
             print(
-                f"{marker} -> "
-                f"{citation['source']} "
-                f"-> {citation['chunk_id']} "
-                f"-> VERIFIED"
+                f"{source.get('citation')} "
+                f"-> "
+                f"{source.get('source')} "
+                f"-> "
+                f"{source.get('chunk_id')}"
             )
 
     print()
+
+    print("Usage:")
+
+    usage = result.get(
+        "usage",
+        {},
+    )
+
+    print(
+        f"Cache Hit: "
+        f"{usage.get('cache_hit')}"
+    )
+
+    print(
+        f"Input Tokens: "
+        f"{usage.get('input_tokens')}"
+    )
+
+    print(
+        f"Output Tokens: "
+        f"{usage.get('output_tokens')}"
+    )
+
+    print(
+        f"Estimated Cost: "
+        f"{usage.get('estimated_cost')}"
+    )
+
+    print(
+        f"Latency: "
+        f"{usage.get('latency_ms')} ms"
+    )
+
+    print()
+
     print("=" * 70)
 
 
-# ---------------------------------------------------------
-# 11. DEMO
-# ---------------------------------------------------------
+# ============================================================
+# MAIN
+# ============================================================
 
 def main() -> None:
+    """
+    Demonstrate:
+
+    1. Normal RAG request.
+    2. Same request served from cache.
+    3. Usage report generation.
+    """
+
+    print()
+
+    print(
+        "Running PharmaLens RAG pipeline..."
+    )
 
     question = (
         "What did Study 001 evaluate?"
     )
 
+
+    # ========================================================
+    # FIRST REQUEST
+    # ========================================================
+
     print()
+
     print(
-        "Running PharmaLens citation pipeline..."
+        "FIRST REQUEST"
     )
 
-    result = answer_with_citations(
-        question,
-        k=4,
+    first_result = (
+        answer_with_citations(
+            question=question,
+
+            k=4,
+
+            use_cache=True,
+        )
     )
 
-    print_citation_result(
-        result
+    print_result(
+        first_result
     )
 
 
-# ---------------------------------------------------------
-# ENTRY POINT
-# ---------------------------------------------------------
+    # ========================================================
+    # SECOND REQUEST - CACHE TEST
+    # ========================================================
+
+    print()
+
+    print(
+        "SECOND REQUEST (CACHE TEST)"
+    )
+
+    second_result = (
+        answer_with_citations(
+            question=question,
+
+            k=4,
+
+            use_cache=True,
+        )
+    )
+
+    print_result(
+        second_result
+    )
+
+
+    # ========================================================
+    # USAGE REPORT
+    # ========================================================
+
+    print()
+
+    print(
+        "GENERATING USAGE REPORT..."
+    )
+
+    report = (
+        generate_usage_report()
+    )
+
+    print()
+
+    print(
+        json.dumps(
+            report,
+            indent=2,
+        )
+    )
+
+    print()
+
+    print(
+        "Usage report saved to:"
+    )
+
+    print(
+        USAGE_REPORT_FILE
+    )
+
 
 if __name__ == "__main__":
     main()
