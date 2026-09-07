@@ -1,9 +1,10 @@
 """FastAPI backend for the PharmaLens RAG service.
 
-Exposes three endpoints:
-  POST /query      — accepts a question, returns a grounded answer with sources
-  POST /documents  — uploads a document, ingests + embeds + indexes it at runtime
-  GET  /health     — liveness check for infrastructure / load-balancers
+Exposes four endpoints:
+  POST /query        — accepts a question, returns a grounded answer with sources
+  POST /query/stream — same pipeline, streamed as server-sent events
+  POST /documents    — uploads a document, ingests + embeds + indexes it at runtime
+  GET  /health       — liveness check for infrastructure / load-balancers
 
 Run with:
     uvicorn src.api:app --reload --host 0.0.0.0 --port 8000
@@ -11,18 +12,29 @@ Run with:
 
 from __future__ import annotations
 
-import time
+import json
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, AsyncGenerator
 
 from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from src.config import load_settings
 from src.corpus_ingestion import process_document
-from src.rag_pipeline import answer_with_citations, client, embed_query, COLLECTION_NAME
+from src.rag_pipeline import (
+    answer_with_citations,
+    embed_query,
+    retrieve_chunks,
+    build_citation_map,
+    assemble_context,
+    COLLECTION_NAME,
+    CHAT_MODEL,
+    client as openai_client,
+)
+from src.hallucination_guardrails import assess_retrieval_quality
 from qdrant_client import QdrantClient
 from qdrant_client.models import PointStruct
 
@@ -223,6 +235,140 @@ def query_rag(request: QueryRequest) -> QueryResponse:
         answer=result.get("answer", ""),
         sources=sources,
         status=status,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Streaming helpers
+# ---------------------------------------------------------------------------
+
+def _sse(event: dict[str, Any]) -> str:
+    """Format a dict as a server-sent event line."""
+    return f"data: {json.dumps(event)}\n\n"
+
+
+async def _rag_stream(question: str) -> AsyncGenerator[str, None]:
+    """
+    Run the RAG pipeline and yield SSE-formatted events:
+
+      {"type": "citations", "sources": [...]}   — sent before generation
+      {"type": "token",     "text": "..."}       — one per streamed token
+      {"type": "status",    "value": "..."}      — pipeline status
+      {"type": "done"}                           — signals completion
+      {"type": "error",     "message": "..."}    — on failure
+    """
+    try:
+        # 1. Embed query
+        query_vector = embed_query(question)
+
+        # 2. Retrieve chunks
+        chunks = retrieve_chunks(query_vector, k=4)
+
+        # 3. Hallucination guard
+        quality = assess_retrieval_quality(chunks)
+        status_value = (
+            "answered" if quality["is_sufficient"] else quality["reason"]
+        )
+
+        if not quality["is_sufficient"]:
+            yield _sse({"type": "status", "value": status_value})
+            yield _sse({
+                "type": "token",
+                "text": "I don't have enough information in the provided context.",
+            })
+            yield _sse({"type": "done"})
+            return
+
+        # 4. Build citation map and emit citations before generation starts
+        citation_map = build_citation_map(chunks)
+        sources_payload = [
+            {
+                "id": marker,
+                "label": marker,
+                "document": info.get("source", ""),
+                "chunk_id": info.get("chunk_id"),
+                "score": next(
+                    (c.get("score") for c in chunks
+                     if c.get("id") == info.get("chunk_id")),
+                    None,
+                ),
+                "text": info.get("text", ""),
+            }
+            for marker, info in citation_map.items()
+        ]
+        yield _sse({"type": "citations", "sources": sources_payload})
+        yield _sse({"type": "status", "value": status_value})
+
+        # 5. Build the cited prompt (reuse assemble_context)
+        context, _ = assemble_context(chunks)
+        available_markers = ", ".join(citation_map.keys())
+        prompt = f"""You are PharmaLens, a clinical research intelligence assistant.
+
+Answer the user's question using ONLY the provided context.
+
+Citation rules:
+1. Cite every factual claim using a citation marker such as [1] or [2].
+2. Only use markers that are listed below.
+3. Available citation markers: {available_markers}
+4. Never invent citation markers or cite sources not in the context.
+5. If the context does not contain enough information, say so.
+6. Keep the answer concise and factual.
+
+Context:
+{context}
+
+Question:
+{question}
+
+Answer:"""
+
+        # 6. Stream tokens from the LLM
+        stream = openai_client.chat.completions.create(
+            model=CHAT_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            stream=True,
+        )
+        for chunk_obj in stream:
+            delta = chunk_obj.choices[0].delta
+            token = getattr(delta, "content", None)
+            if token:
+                yield _sse({"type": "token", "text": token})
+
+        yield _sse({"type": "done"})
+
+    except Exception as exc:  # noqa: BLE001
+        yield _sse({
+            "type": "error",
+            "message": "The answer stopped streaming. Please retry.",
+        })
+
+
+# ---------------------------------------------------------------------------
+# Streaming endpoint
+# ---------------------------------------------------------------------------
+
+@app.post("/query/stream", tags=["rag"])
+async def stream_query(request: QueryRequest) -> StreamingResponse:
+    """
+    Stream the RAG answer as server-sent events.
+
+    Event types:
+      citations — source list emitted before generation begins
+      token     — one chunk of generated text
+      status    — pipeline status (answered / no_context / insufficient_relevance)
+      done      — signals the stream is complete
+      error     — emitted if generation fails mid-stream
+    """
+    if len(request.question) < 3:
+        raise HTTPException(status_code=422, detail="Question too short.")
+
+    return StreamingResponse(
+        _rag_stream(request.question),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
     )
 
 
